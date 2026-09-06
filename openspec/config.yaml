@@ -1,0 +1,47 @@
+schema: spec-driven
+
+context: |
+  Project: Eelt's Forestry Remastered, a Project Zomboid mod (mod id
+  EeltsForestryRemastered, author Eelt). Scope is a forestry overhaul, still being
+  defined.
+
+  Layout: everything the game loads lives under the version folder `42.20/`
+  (`mod.info`, `poster.png`, `icon.png`, `media/lua/...`). Client lua goes in
+  `media/lua/client/`, server lua in `media/lua/server/`; item and distribution
+  tables live under `media/lua/server/Items/`. Files are named
+  `EeltsForestryRemastered_<Topic>.lua`.
+
+  Target build: Project Zomboid B42.20. Earlier B42 builds differ in item and recipe
+  definitions, so verify claims against 42.20's own game files rather than older
+  wiki or B41 knowledge.
+
+  Conventions:
+  - Never edit or shadow a vanilla file. Add new, separately-named entries prefixed
+    `Eelt_` and layer them onto the game's tables at load time.
+  - Lua has no build step and no test suite. Verification is loading the mod in
+    game and reading the console output, so keep `print` diagnostics prefixed with
+    "Eelt's Forestry Remastered:".
+  - Comments explain why a wiring choice is correct (load order, which table the
+    engine actually reads, which vanilla weight a number matches), not what the
+    line does.
+  - Prose style, in code comments and in every generated artifact: never use " -- "
+    as a clause separator. Use a comma, a semicolon, or reword. Prefer deleting an
+    explanatory comment over lengthening it to work around this.
+  - Binary assets (png, ogg, wav, zip) are stored in Git LFS, see `.gitattributes`.
+
+rules:
+  proposal:
+    - State which B42.20 game files or tables the change touches and how the claim was verified.
+    - Include a "Non-goals" section.
+  tasks:
+    - Each task must name the file it changes under 42.20/media/lua/.
+    - Include an in-game verification step, there is no automated test suite.
+
+operations:
+  apply:
+    guidance:
+      - Commit messages are a single plain imperative line, no body and no trailers.
+      - Do not add Co-Authored-By, Generated-with, or any other attribution trailer.
+  archive:
+    guidance:
+      - Update README.md's "What it does" section when a change adds a player-visible feature.
