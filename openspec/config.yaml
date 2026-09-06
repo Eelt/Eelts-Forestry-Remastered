@@ -21,12 +21,15 @@ context: |
   - Lua has no build step and no test suite. Verification is loading the mod in
     game and reading the console output, so keep `print` diagnostics prefixed with
     "Eelt's Forestry Remastered:".
-  - Comments explain why a wiring choice is correct (load order, which table the
-    engine actually reads, which vanilla weight a number matches), not what the
-    line does.
+  - Comments are sparse and short: mostly one line, often trailing on the line they
+    describe, plus banner comments labelling a group of related statements. A brief
+    note on a non-obvious constraint is welcome. Do not write multi-paragraph
+    justification headers; a finding worth keeping goes in the change proposal, not
+    in a comment block.
+  - Commit messages are one line with no body and no trailers. Describe what
+    changed, naming the specific thing. No conventional-commits prefix.
   - Prose style, in code comments and in every generated artifact: never use " -- "
-    as a clause separator. Use a comma, a semicolon, or reword. Prefer deleting an
-    explanatory comment over lengthening it to work around this.
+    as a clause separator. Use a comma, a semicolon, or reword.
   - Binary assets (png, ogg, wav, zip) are stored in Git LFS, see `.gitattributes`.
 
 rules:
@@ -40,8 +43,9 @@ rules:
 operations:
   apply:
     guidance:
-      - Commit messages are a single plain imperative line, no body and no trailers.
+      - Commit messages are a single plain line, no body and no trailers.
       - Do not add Co-Authored-By, Generated-with, or any other attribution trailer.
+      - Keep new comments to a line or two; put the reasoning in the change proposal instead.
   archive:
     guidance:
       - Update README.md's "What it does" section when a change adds a player-visible feature.
