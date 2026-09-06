@@ -1,0 +1,7 @@
+.DS_Store
+
+# Local tooling, not part of the mod
+.serena/
+.claude/
+CLAUDE.md
+AGENTS.md
