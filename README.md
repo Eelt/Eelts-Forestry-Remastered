@@ -29,6 +29,10 @@ vanilla entries are never modified in place.
 [B42 tree matrix](docs/b42-tree-matrix.md) documents the eleven tree species B42.20 ships,
 their size stages, which forage zones grow them and what each one can be propagated from.
 
+[B42 lua and engine notes](docs/b42-lua-notes.md) collects engine-level findings that cost
+real debugging time: the 32 bit overflow in the game's `%` operator, sandbox option handling,
+which events do and do not fire, and the sprite overlay rules.
+
 ## Installation
 
 Copy the `42.20/` folder into your Project Zomboid `mods/EeltsForestryRemastered/`
