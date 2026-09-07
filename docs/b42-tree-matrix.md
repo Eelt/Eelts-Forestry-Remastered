@@ -637,6 +637,62 @@ Erosion trees are real `IsoTree` objects. `ErosionObj.createObject` calls
 species display name, with `doNotSync = true`. `IsoTree.setSprite` calls `initTree()` again,
 so size and log yield are recomputed from the sprite every time the stage or season changes.
 
+### How a tree is drawn
+
+This is not one sprite. Erosion assembles a tree from two layers, and the split is easy to
+get wrong.
+
+The **base** sprite is always the season 0 sprite for the stage, because every tree is
+constructed with `noSeasonBase = true`. For a **deciduous** species that base is the **bare**
+tree; all foliage comes from the second layer. For an **evergreen** it is the foliage itself,
+since evergreens have no second layer at all.
+
+The **overlay** is a child sprite pushed into the object's `attachedAnimSprite`, chosen by
+the displayed season. `ErosionObj.setStageObject` clears that list before setting it, and
+anything that changes a tree's sprite without clearing it leaves the old overlay rendering
+as a second, bare tree behind the real one.
+
+Sheet indices follow one rule, where position 0 is the base:
+
+| Stage | Sheet | Index |
+|---|---|---|
+| 0 to 3 | `e_<species>_1` | `position * 4 + stage` |
+| 4 to 5 | `e_<species>JUMBO_1` | `position * 2 + (stage - 4)` |
+| 6 | `e_<species>JUMBOXL_1` | `position` |
+| 7 | `e_<species>JUMBOXXL_1` | `position` |
+
+Positions 2 to 5 are the seasonal overlays, and erosion maps the four reachable seasons onto
+them. `ErosionSeason.names` lists six, but `setSeasonData` only ever assigns `curSeason` 1,
+2, 4 and 5, so **Late Summer is unreachable**.
+
+| Season | Overlay position | Look |
+|---|---|---|
+| Spring | 2 | spring foliage |
+| Early Summer, first half | 3 | green |
+| Early Summer, second half | 4 | tinted, and the reason trees yellow in early July |
+| Autumn, first half | 5 | autumn colour |
+| Autumn, second half | none | bare |
+| Winter | none | bare, plus the snow swap |
+
+Snow is not an overlay. `ErosionIceQueen` maps a base sprite to a winter counterpart at the
+`IsoSprite` level and swaps them globally, and it registers evergreens too, because
+`iceQueen.addSprite` runs before the `if (!seasonal) continue` guard in `NatureTrees.init`.
+
+### The July problem
+
+`seasonDisp[2]` marks summer as split with `season2 = 3`, so once a square passes the
+halfway point of summer, adjusted by its magic number, the tree switches to overlay position
+4 while the world is still in summer. Summer runs from roughly 13 May to 21 August, so trees
+begin showing autumn tint around **2 July**, which is far too early for Kentucky.
+
+The season boundaries themselves are reasonable. `hottestDay` is 22 June and `summerEndDay`
+adds `floor(40 + 40 * summerMod)` where `summerMod = 0.02 * tempMax` and `tempMax` defaults
+to 25, giving about 21 August and varying by year. Autumn then runs to 22 December. Observed
+in game on 2026-09-07: 24 August still read Early Summer and 24 September read Autumn.
+
+Note that `getClimateManager()` is not an independent source. `ClimateManager` sets its
+season to `ErosionMain.getInstance().getSeasons()`, so it reports exactly these values.
+
 ## Verification status
 
 1. **Seasonal sprites do not affect size. RESOLVED, not a defect.** Originally flagged on
@@ -733,6 +789,15 @@ The Canadian Hemlock cone drop is no longer carried forward; it shipped as the
 `fix-conifer-cone-drops` change and is controlled by
 `EeltsForestryRemastered.FixConiferConeDrops`. Trees felled by a vehicle or by fire remain
 uncorrected, because they do not route through the chopping action.
+
+Tree growth is no longer carried forward either. The `add-tree-growth` change gives a tree
+its own elapsed-time growth through all eight stages, controlled by
+`EeltsForestryRemastered.TreeGrowth` and `EeltsForestryRemastered.TreeGrowthTimeMultiplier`.
+It takes a tree away from erosion by renaming it, which is what makes erosion relinquish the
+square, and then drives both stage and seasonal overlay itself. It deliberately skips overlay
+position 4, so an adopted tree stays green through July and turns only once autumn begins.
+The visible consequence is that an adopted tree and an unadopted neighbour disagree during
+July and early August.
 
 ## Tape language flagged for later
 

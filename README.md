@@ -11,6 +11,13 @@ recipe definitions, so this mod's wiring assumes B42.20.
 Everything the mod adds is layered on top of the game's own definitions at load time, so
 vanilla entries are never modified in place.
 
+- **Trees grow.** The base game caps naturally spawned trees well below full size and
+  drives their growth from a single world-wide counter, so forests never mature. This mod
+  grows a tree on its own elapsed time through all eight sizes, up to the largest. Adopted
+  trees also stay green through July instead of taking on autumn colour in high summer, and
+  turn once autumn actually begins. Controlled by the sandbox options "Tree growth", set to
+  all trees by default, and "Tree growth time", where 1.0 is roughly three in-game months
+  from sapling to full size.
 - **Canadian Hemlock drops pine cones.** The base game only gives cones to trees whose
   sprite name contains "pine", so Hemlock never drops any despite being a conifer. This mod
   gives it cones on the same terms as Virginia Pine, which means from the third growth stage

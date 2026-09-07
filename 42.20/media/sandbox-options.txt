@@ -7,3 +7,23 @@ option EeltsForestryRemastered.FixConiferConeDrops
     page = EeltsForestryRemastered,
     translation = EeltsForestryRemastered_FixConiferConeDrops,
 }
+
+option EeltsForestryRemastered.TreeGrowth
+{
+    type = enum,
+    numValues = 3,
+    default = 3,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_TreeGrowth,
+    valueTranslation = EeltsForestryRemastered_TreeGrowth_Values,
+}
+
+option EeltsForestryRemastered.TreeGrowthTimeMultiplier
+{
+    type = double,
+    default = 1.0,
+    min = 0.1,
+    max = 20.0,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_TreeGrowthTimeMultiplier,
+}
