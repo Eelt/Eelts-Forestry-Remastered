@@ -32,7 +32,7 @@ for an in-game check.
 
 ## Decisions
 
-### The document lives at `docs/b42-tree-matrix.md`, not under `openspec/`
+### The document lives at `docs/reference/b42-tree-matrix.md`, not under `openspec/`
 
 The repo has no `docs/` directory yet, so this introduces one. The alternative was
 `openspec/changes/document-b42-tree-matrix/`, which was rejected because change directories

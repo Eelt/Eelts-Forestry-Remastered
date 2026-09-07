@@ -1,6 +1,6 @@
 ## Context
 
-See `proposal.md` for motivation and `docs/b42-tree-matrix.md` for the tree facts this rests
+See `proposal.md` for motivation and `docs/reference/b42-tree-matrix.md` for the tree facts this rests
 on. The constraints that shape the approach:
 
 - No vanilla file or vanilla table may be edited or shadowed, so the drop cannot be fixed
@@ -156,7 +156,7 @@ either real conifer, so a player may well expect a cone from it. It is an evergr
 broadleaf that bears drupes, and vanilla already gives it a berry, so a cone would be wrong.
 
 This is called out because it is the most likely thing to be reported as a bug against this
-change. The reasoning belongs in `docs/b42-tree-matrix.md`, which already carries it, rather
+change. The reasoning belongs in `docs/reference/b42-tree-matrix.md`, which already carries it, rather
 than in a code comment.
 
 ## Risks / Trade-offs
@@ -166,7 +166,7 @@ than in a code comment.
   wrapper, and keep the wrapper free of early returns so a later wrapper still runs.
 - Vanilla's cone arithmetic is copied, so if a future build changes `dropWood`'s rates
   Hemlock and Pine will diverge. Mitigation: the arithmetic is recorded in
-  `docs/b42-tree-matrix.md` with the source class, so a version bump has a place to check.
+  `docs/reference/b42-tree-matrix.md` with the source class, so a version bump has a place to check.
 - `getObjectIndex() == -1` is an inference about "it fell on this call" borrowed from
   vanilla's own use. If a tree could report that without having toppled, cones would appear
   without a felled tree. Mitigation: the in-game verification chops trees of several sizes

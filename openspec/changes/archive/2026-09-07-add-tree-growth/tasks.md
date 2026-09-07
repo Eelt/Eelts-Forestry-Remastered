@@ -1,6 +1,6 @@
 Reference build for every claim: the Steam install at `Project Zomboid.app/Contents/Java/`,
 reporting version `42.20.4`, revision `b0bbce05d5`. Tree facts come from
-`docs/b42-tree-matrix.md` and are not re-derived here.
+`docs/reference/b42-tree-matrix.md` and are not re-derived here.
 
 Group 1 exists to fail fast. The whole approach rests on erosion relinquishing a renamed
 tree, and that is inferred from decompiled control flow rather than observed. Do not build
@@ -9,7 +9,7 @@ anything else until 1.2 passes.
 ## 1. Prove the ownership lever
 
 - [x] 1.1 Add `42.20/media/lua/shared/EeltsForestryRemastered_TreeGrowthSprites.lua` with the
-      stage to base sprite mapping from `docs/b42-tree-matrix.md`: `<tileset>_<stage>` for
+      stage to base sprite mapping from `docs/reference/b42-tree-matrix.md`: `<tileset>_<stage>` for
       stages 0 to 3, `<tileset with _1 replaced by JUMBO_1>_0` and `_1` for stages 4 and 5,
       and the JUMBOXL and JUMBOXXL sheets at index 0 for stages 6 and 7. Include a reverse
       lookup from a sprite name back to species and stage, since adoption reads a tree's
@@ -225,10 +225,10 @@ anything else until 1.2 passes.
 
 ## 7. Documentation
 
-- [x] 7.1 Update `docs/b42-tree-matrix.md` to record that the mod now grows trees and what it
+- [x] 7.1 Update `docs/reference/b42-tree-matrix.md` to record that the mod now grows trees and what it
       takes over from erosion, keeping the description of vanilla behaviour intact so the
       document still describes the base game.
-- [x] 7.2 Add a section to `docs/b42-tree-matrix.md` documenting vanilla's seasonal display
+- [x] 7.2 Add a section to `docs/reference/b42-tree-matrix.md` documenting vanilla's seasonal display
       timing as its own finding, since it was not previously recorded: `seasonDisp[2]` marks
       summer as split with `season2 = 3`, so trees show autumn colour from roughly 2 July,
       while the autumn season itself does not begin until about 21 August and runs to 22

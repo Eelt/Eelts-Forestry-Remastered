@@ -8,7 +8,7 @@ that behaves as though it is not one.
 
 This is the smallest useful piece of the forestry overhaul and it is worth doing first. It
 is independent of the planting system, it needs only the species facts already established
-in `docs/b42-tree-matrix.md`, and it exercises the whole pipeline once, a sandbox setting, a
+in `docs/reference/b42-tree-matrix.md`, and it exercises the whole pipeline once, a sandbox setting, a
 lua hook and in-game verification, before anything larger depends on that pipeline working.
 
 ## What Changes
@@ -21,7 +21,7 @@ lua hook and in-game verification, before anything larger depends on that pipeli
 - Add `42.20/media/lua/shared/Translate/EN/Sandbox.json` for the option's display name
   and tooltip.
 - Update `README.md`'s "What it does", which becomes the first entry there.
-- Update `docs/b42-tree-matrix.md` so the Canadian Hemlock row and the cone test defects
+- Update `docs/reference/b42-tree-matrix.md` so the Canadian Hemlock row and the cone test defects
   section record that the mod now corrects this, and so the outstanding in-game check is
   resolved by this change's verification step.
 
@@ -69,11 +69,11 @@ New files:
 Modified files:
 
 - `README.md`
-- `docs/b42-tree-matrix.md`
+- `docs/reference/b42-tree-matrix.md`
 
 Every claim below was verified against the installed build, version `42.20.4`, revision
 `b0bbce05d5`, at `Project Zomboid.app/Contents/Java/`. The tree facts are recorded in
-`docs/b42-tree-matrix.md` and are not restated here.
+`docs/reference/b42-tree-matrix.md` and are not restated here.
 
 - `zombie/iso/objects/IsoTree.class`, decompiled. `dropWood` gates every species drop behind
   `numPlanks > 2`, so a cone is only possible from log yield 3, which is size 4 and

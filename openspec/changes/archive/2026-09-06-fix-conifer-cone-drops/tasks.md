@@ -1,6 +1,6 @@
 Reference build for every claim: the Steam install at `Project Zomboid.app/Contents/Java/`,
 reporting version `42.20.4`, revision `b0bbce05d5`. Tree facts come from
-`docs/b42-tree-matrix.md` and are not re-derived here.
+`docs/reference/b42-tree-matrix.md` and are not re-derived here.
 
 ## 1. Sandbox option plumbing
 
@@ -44,7 +44,7 @@ reporting version `42.20.4`, revision `b0bbce05d5`. Tree facts come from
       iteration for `yield - 1` iterations, where the cone is certain if `roll <= 0` and
       otherwise lands on `ZombRand(roll) == 0`. Add each cone with
       `square:AddWorldInventoryItem("Base.Pinecone", 0, 0, 0)`. Verify cone counts against
-      the table in `docs/b42-tree-matrix.md`.
+      the table in `docs/reference/b42-tree-matrix.md`.
 - [x] 2.6 Gate the whole addition on the sandbox option, treating a nil value as on so an
       existing save does not silently lose the correction. Verify by creating one world with
       the option off and one with it on, and chopping a large Hemlock in each.
@@ -60,7 +60,7 @@ clause in them is still outstanding and is covered by this group. Nothing below 
 
 - [x] 3.1 Resolve the outstanding check from the previous change: chop a Canadian Hemlock
       with the mod's option **off** and confirm no cone drops, which is the last unverified
-      claim in `docs/b42-tree-matrix.md`. Record the result there and clear the
+      claim in `docs/reference/b42-tree-matrix.md`. Record the result there and clear the
       `NEEDS IN-GAME CHECK` marker.
       Confirmed 2026-09-06 on `e_canadianhemlockJUMBO_1_1`, size 6, log yield 5. Verified
       with the mod not enabled rather than with the option off, which is a stronger test of
@@ -94,16 +94,16 @@ clause in them is still outstanding and is covered by this group. Nothing below 
 ## 4. Documentation
 
 - [x] 4.1 Update the Canadian Hemlock row and the cone test defects section of
-      `docs/b42-tree-matrix.md` to record that the mod now corrects this behind
+      `docs/reference/b42-tree-matrix.md` to record that the mod now corrects this behind
       `EeltsForestryRemastered.FixConiferConeDrops`, keeping the description of vanilla's
       behaviour intact so the document still describes the base game accurately.
 - [x] 4.2 Move the propagule drop fix out of the carried-forward section of
-      `docs/b42-tree-matrix.md` now that it has shipped, leaving behind only the parts still
+      `docs/reference/b42-tree-matrix.md` now that it has shipped, leaving behind only the parts still
       outstanding: propagule items for the eight deciduous species, and the acorn's fate.
       Verify the carried-forward section still matches this change's `design.md` for
       everything not yet built.
 - [x] 4.3 Replace `README.md`'s "Scope is still being defined" placeholder in "What it does"
       with the first real entry, describing the Hemlock cone correction and naming its
-      sandbox option. Verify the link to `docs/b42-tree-matrix.md` still resolves.
+      sandbox option. Verify the link to `docs/reference/b42-tree-matrix.md` still resolves.
 - [x] 4.4 Bump `modversion` in `42.20/mod.info` from `0.0.1`, since this is the first release
       with player-visible behaviour.

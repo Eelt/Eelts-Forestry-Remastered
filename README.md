@@ -24,14 +24,17 @@ vanilla entries are never modified in place.
   up, with the chance rising as the tree gets larger. Controlled by the sandbox option
   "Conifers drop cones", on by default.
 
-## Reference
+## Documentation
 
-[B42 tree matrix](docs/b42-tree-matrix.md) documents the eleven tree species B42.20 ships,
-their size stages, which forage zones grow them and what each one can be propagated from.
+[docs/reference/](docs/reference/) is what the game and the mod actually do, verified
+against B42.20's shipped files. It holds the tree matrix, covering the eleven species, their
+size stages, which forage zones grow them and what each one can be propagated from, and the
+lua and engine notes, covering the 32 bit overflow in the game's `%` operator, sandbox
+option handling and which events fire.
 
-[B42 lua and engine notes](docs/b42-lua-notes.md) collects engine-level findings that cost
-real debugging time: the 32 bit overflow in the game's `%` operator, sandbox option handling,
-which events do and do not fire, and the sprite overlay rules.
+[docs/future/](docs/future/) is design for work that is not implemented: the decisions
+carried forward from the reference documents, and the seed items the eight deciduous species
+would need before they can be grown from anything other than a sapling.
 
 ## Installation
 

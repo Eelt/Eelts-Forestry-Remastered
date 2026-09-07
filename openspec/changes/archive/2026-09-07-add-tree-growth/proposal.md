@@ -1,6 +1,6 @@
 ## Why
 
-Trees in B42.20 do not really grow. `docs/b42-tree-matrix.md` records why, and all three
+Trees in B42.20 do not really grow. `docs/reference/b42-tree-matrix.md` records why, and all three
 reasons are independent:
 
 - Growth is a function of one global `eTicks` counter rather than per-tree elapsed time, so
@@ -35,7 +35,7 @@ inventing growth alongside items, recipes and a VHS gate.
   grows it from whatever stage it is already at, taking over both its stage and its seasonal
   appearance.
 - Add the option names and value labels to `42.20/media/lua/shared/Translate/EN/Sandbox.json`.
-- Update `README.md` and `docs/b42-tree-matrix.md` to record the new behaviour and how it
+- Update `README.md` and `docs/reference/b42-tree-matrix.md` to record the new behaviour and how it
   relates to vanilla erosion.
 
 Selecting stock erosion behaviour leaves vanilla completely untouched.
@@ -47,7 +47,7 @@ Selecting stock erosion behaviour leaves vanilla completely untouched.
   player-planted value is defined now so the option does not have to change later, but it
   behaves identically to stock until the planting change ships.
 - **Propagule items, the VHS gate, and the acorn decision.** All still carried forward in
-  `docs/b42-tree-matrix.md`.
+  `docs/reference/b42-tree-matrix.md`.
 - **Changing what a tree drops.** Growth changes a tree's size, and size already drives log
   yield through vanilla's own `LOGS_PER_SIZE`. No drop table is touched.
 - **Growing trees the player has never been near.** Adoption is a bounded scan around
@@ -87,12 +87,12 @@ Modified files:
 - `42.20/media/sandbox-options.txt`
 - `42.20/media/lua/shared/Translate/EN/Sandbox.json`
 - `README.md`
-- `docs/b42-tree-matrix.md`
+- `docs/reference/b42-tree-matrix.md`
 
 Persistence: the global object system writes `gos_Eelt_TreeGrowth.bin` into the save.
 
 Verified against the installed build, version `42.20.4`, revision `b0bbce05d5`. Tree facts
-come from `docs/b42-tree-matrix.md` and are not restated here.
+come from `docs/reference/b42-tree-matrix.md` and are not restated here.
 
 - `media/lua/server/Map/SGlobalObjectSystem.lua` and `SGlobalObject.lua`. The server-side
   base classes, their persistence through `SGlobalObjects.registerSystem(name)` into

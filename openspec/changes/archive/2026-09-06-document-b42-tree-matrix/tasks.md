@@ -9,7 +9,7 @@ Record that build string in the document header.
 
 ## 1. Document skeleton
 
-- [x] 1.1 Create `docs/b42-tree-matrix.md` with the header (target build, reference build
+- [x] 1.1 Create `docs/reference/b42-tree-matrix.md` with the header (target build, reference build
       string, date read, and the one-line statement that this describes vanilla B42.20 and
       not anything the mod adds) and the section headings for groups 2 through 5. Verify by
       confirming the file exists and `README.md`'s link target in task 7.1 resolves to it.
@@ -19,7 +19,7 @@ Record that build string in the document header.
 
 ## 2. Species table
 
-- [x] 2.1 In `docs/b42-tree-matrix.md`, add the species table with one row per species,
+- [x] 2.1 In `docs/reference/b42-tree-matrix.md`, add the species table with one row per species,
       keyed by base tileset name, with columns for `NatureTrees` array index, display name
       as returned by `IsoObject:getName()`, real-world species, and evergreen or deciduous.
       Verify all eleven rows match the `trees` array in the decompiled `NatureTrees`, in
@@ -38,7 +38,7 @@ Record that build string in the document header.
 
 ## 3. Size stages
 
-- [x] 3.1 In `docs/b42-tree-matrix.md`, add the stage table from `design.md` mapping each of
+- [x] 3.1 In `docs/reference/b42-tree-matrix.md`, add the stage table from `design.md` mapping each of
       the eight stages to its `tree` sprite property, tileset family and footprint. Verify
       the `tree` values against `tiledefinitions_erosion.tiles.txt` (1 to 4),
       `jumbo_trees.tiles.txt` (5 and 6) and `jumbo_trees_big.tiles.txt` (7 for JUMBOXL, 8
@@ -59,7 +59,7 @@ Record that build string in the document header.
 
 ## 4. Forage zones and natural spawning
 
-- [x] 4.1 In `docs/b42-tree-matrix.md`, add the forage zone to worldgen biome mapping table
+- [x] 4.1 In `docs/reference/b42-tree-matrix.md`, add the forage zone to worldgen biome mapping table
       transcribed from `media/lua/server/metazones/BiomeMapConfig.lua`, including the pixel
       value per row. Call out that the `vegitation` and `phmix_forest` rows are commented
       out in that file, so the `Vegitation` and `PHMixForest` zones defined in
@@ -101,7 +101,7 @@ Record that build string in the document header.
 
 ## 5. Propagation items and the gaps
 
-- [x] 5.1 In `docs/b42-tree-matrix.md`, add the propagation column to the species table with
+- [x] 5.1 In `docs/reference/b42-tree-matrix.md`, add the propagation column to the species table with
       one of three values per species: cone, sapling only, or berry. Verify against
       `IsoTree.dropWood`: a pinecone drops when the sprite name lowercased contains `pine`,
       an acorn when it contains `oak` or the sprite is `vegetation_trees_01_13`, `_14` or
@@ -142,7 +142,7 @@ Record that build string in the document header.
 
 ## 6. Growth system findings and in-game verification
 
-- [x] 6.1 In `docs/b42-tree-matrix.md`, add the erosion growth section: growth is driven by
+- [x] 6.1 In `docs/reference/b42-tree-matrix.md`, add the erosion growth section: growth is driven by
       the single global `eTicks` counter, one tick per `tickunit` of 144 in-game hours by
       default, scaled by the erosion speed and `erosionDays` sandbox settings; a tree's
       stage is `floor((eTick - spawnTime) / (cycleTime / (maxStage + 1)))` with `cycleTime`
@@ -183,7 +183,7 @@ Record that build string in the document header.
 
 ## 7. Repository wiring
 
-- [x] 7.1 Add a one-line pointer to `docs/b42-tree-matrix.md` in `README.md`. Keep the
+- [x] 7.1 Add a one-line pointer to `docs/reference/b42-tree-matrix.md` in `README.md`. Keep the
       "What it does" section's "scope is still being defined" wording, since this change
       adds no player-visible feature. Verify the link resolves from the repo root.
 - [x] 7.2 Write `.serena/memories/b42_trees.md` pointing at the document and summarising
@@ -192,5 +192,5 @@ Record that build string in the document header.
       existing memory references.
 - [x] 7.3 Confirm `docs/` needs no `.gitattributes` entry, since the document is markdown
       and markdown is already pinned to LF, and confirm `git status` shows only
-      `docs/b42-tree-matrix.md`, `README.md` and the `openspec/changes/` artifacts as
+      `docs/reference/b42-tree-matrix.md`, `README.md` and the `openspec/changes/` artifacts as
       additions. `.serena/` stays untracked.

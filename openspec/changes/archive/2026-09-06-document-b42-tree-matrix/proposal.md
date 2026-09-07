@@ -15,7 +15,7 @@ something discovered halfway through implementation.
 
 ## What Changes
 
-- Add `docs/b42-tree-matrix.md`, a reference document covering the eleven tree species
+- Add `docs/reference/b42-tree-matrix.md`, a reference document covering the eleven tree species
   B42.20 ships, keyed by their erosion tileset names.
 - Record for each species: display name, real-world species, tileset family, evergreen or
   deciduous, which of the eight size stages have sprites, and which propagation items
@@ -72,7 +72,7 @@ None.
 
 New files:
 
-- `docs/b42-tree-matrix.md`
+- `docs/reference/b42-tree-matrix.md`
 - `.serena/memories/b42_trees.md` (gitignored, local tooling only)
 
 Modified files:

@@ -1,6 +1,6 @@
 ## Context
 
-See `proposal.md` for motivation and `docs/b42-tree-matrix.md` for the tree facts. The
+See `proposal.md` for motivation and `docs/reference/b42-tree-matrix.md` for the tree facts. The
 constraints that shape the approach:
 
 - No vanilla file or table may be edited, and vanilla erosion actively manages the same
