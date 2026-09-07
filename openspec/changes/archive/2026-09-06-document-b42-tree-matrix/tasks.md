@@ -154,7 +154,7 @@ Record that build string in the document header.
       nothing grows further; and the stage 3 cap from task 4.5 means erosion alone never
       produces a jumbo tree. Cross-reference the configuration decision recorded in
       `design.md`.
-- [ ] 6.3 Load the mod in game on a fresh save and check the three marked findings. Confirm
+- [x] 6.3 Load the mod in game on a fresh save and check the three marked findings. Confirm
       the console shows the expected `Eelt's Forestry Remastered:` prints from
       `42.20/media/lua/client/EeltsForestryRemastered_Debug.lua` and no lua error, since
       this change must leave loading behaviour untouched. In an unvisited forest area,
@@ -166,7 +166,9 @@ Record that build string in the document header.
       in-game check needed. Finding 3 is confirmed in game as of 2026-09-06. The boot check
       passed on 2026-09-06 against version 42.20.4, revision b0bbce05d5: the mod loads, the
       parse-time and main menu prints both appear, and no error or warning names the mod.
-      Still open: finding 2, the Canadian Hemlock cone drop.
+      Finding 2 was confirmed on 2026-09-06 during the fix-conifer-cone-drops work: a size 6
+      Canadian Hemlock felled with the correction disabled dropped no cone. All three
+      findings are now resolved and no `NEEDS IN-GAME CHECK` marker remains in the document.
 - [x] 6.4 Add the carried-forward decisions section from `design.md` as the document's
       closing section, covering the VHS unlock approach, the maximum growable size
       configuration dropdown and its default, the tape requirement toggle, the pinecone
