@@ -8,9 +8,14 @@ recipe definitions, so this mod's wiring assumes B42.20.
 
 ## What it does
 
-**Scope is still being defined.** This section will list each change once the first
-feature set lands. Everything the mod adds is namespaced `Eelt_*` and layered on top of
-the game's own definitions at load time, so vanilla entries are never modified in place.
+Everything the mod adds is layered on top of the game's own definitions at load time, so
+vanilla entries are never modified in place.
+
+- **Canadian Hemlock drops pine cones.** The base game only gives cones to trees whose
+  sprite name contains "pine", so Hemlock never drops any despite being a conifer. This mod
+  gives it cones on the same terms as Virginia Pine, which means from the third growth stage
+  up, with the chance rising as the tree gets larger. Controlled by the sandbox option
+  "Conifers drop cones", on by default.
 
 ## Reference
 

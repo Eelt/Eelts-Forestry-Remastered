@@ -1,0 +1,9 @@
+VERSION = 1,
+
+option EeltsForestryRemastered.FixConiferConeDrops
+{
+    type = boolean,
+    default = true,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_FixConiferConeDrops,
+}

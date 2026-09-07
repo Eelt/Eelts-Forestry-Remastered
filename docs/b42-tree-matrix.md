@@ -10,8 +10,9 @@ Target build: B42.20. Values were read on 2026-09-06 from the Steam install at
 
 Most of this is read straight out of the files and is stated flatly. Anything that is an
 inference, or that has been checked in game, is tracked in
-[Verification status](#verification-status). One claim there is still untested and is
-marked `NEEDS IN-GAME CHECK` where it appears.
+[Verification status](#verification-status). Every claim there has now been confirmed in
+game except the behaviour of the legacy `vegetation_trees` sprites, which erosion replaces
+on chunk load and which therefore cannot practically be observed.
 
 ## How to re-check this
 
@@ -53,8 +54,8 @@ Eleven species, keyed by base erosion tileset. Order matches the `trees` array i
 
 | # | Tileset key | Display name | Real species | Category | Propagation |
 |---|---|---|---|---|---|
-| 0 | `e_americanholly_1` | American Holly | *Ilex opaca* | Evergreen broadleaf | Sapling only; its berry is food and poison, not a seed |
-| 1 | `e_canadianhemlock_1` | Canadian Hemlock | *Tsuga canadensis* | Conifer | Sapling only (see [cone test defects](#cone-test-defects)) |
+| 0 | `e_americanholly_1` | American Holly | *Ilex opaca* | Evergreen broadleaf | Berry, Autumn and Winter only, see [the holly berry](#the-holly-berry-and-why-it-is-the-chosen-propagule) |
+| 1 | `e_canadianhemlock_1` | Canadian Hemlock | *Tsuga canadensis* | Conifer | Cone in vanilla: none, see [cone test defects](#cone-test-defects). This mod corrects it |
 | 2 | `e_virginiapine_1` | Virginia Pine | *Pinus virginiana* | Conifer | Cone, stage 3 and up only |
 | 3 | `e_riverbirch_1` | Riverbirch | *Betula nigra* | Deciduous broadleaf | Sapling only |
 | 4 | `e_cockspurhawthorn_1` | Cockspur Hawthorn | *Crataegus crus-galli* | Deciduous broadleaf | Sapling only |
@@ -231,8 +232,18 @@ stage 3 can drop a species item of any kind.
 | 0 to 2 | 1 to 2 | no |
 | 3 and up | 3 and up | yes, once per log iteration |
 
-For Virginia Pine the cone chance per iteration is `1 in roll`, so it is 1 in 3 at stage 3,
-1 in 2 at stage 4, and guaranteed from stage 5 up where `roll` reaches 1 and then 0.
+The three species drops do not share a rate, and the berry carries an extra condition:
+
+| Drop | Species | Chance per log iteration | Extra condition |
+|---|---|---|---|
+| `Base.Pinecone` | Virginia Pine | `1 in roll` | none |
+| `Base.HollyBerry` | American Holly | `1 in roll * 2` | season is Autumn or Winter |
+| `Base.Acorn` | none reachable | `1 in roll * 2` | none |
+
+So the cone is 1 in 3 at stage 3, 1 in 2 at stage 4, and guaranteed from stage 5 up where
+`roll` reaches 1 and then 0. The berry is half as likely at every size, and outside Autumn
+and Winter it cannot drop at all. Both become certain once `roll` hits 0 or below, since
+`roll * 2` is then also non positive.
 
 ## Forage zones and natural spawning
 
@@ -388,7 +399,7 @@ the item scripts were searched for a matching item under every plausible name.
 
 | Species | Real propagule | Item in B42.20 |
 |---|---|---|
-| American Holly | Red drupe | `Base.HollyBerry`, but see [the holly berry is a hazard](#the-holly-berry-is-a-hazard-not-a-seed) |
+| American Holly | Red drupe | `Base.HollyBerry`, seasonally gated, see [the holly berry](#the-holly-berry-and-why-it-is-the-chosen-propagule) |
 | Canadian Hemlock | Small seed cone | none |
 | Virginia Pine | Seed cone | `Base.Pinecone` |
 | Riverbirch | Winged samaras in a strobile | none |
@@ -412,10 +423,25 @@ through `5`, `BerryPoisonIvy` and `WinterBerry`, belong to bushes rather than tr
 are a separate erosion category, `NatureBush`, and are out of scope for this document.
 `Base.HollyBerry` is the one berry item that belongs to a species in the tree roster.
 
-So exactly two of the eleven species have any species-specific item at all, and only one of
-those, Virginia Pine's cone, functions as a seed.
+So exactly two of the eleven species have a species-specific item at all: Virginia Pine's
+cone and American Holly's berry. This mod treats both as that species' propagule. The other
+nine have nothing, and can only be propagated from a sapling.
 
-### The holly berry is a hazard, not a seed
+### The holly berry, and why it is the chosen propagule
+
+American Holly already has a working propagule drop in vanilla, which is easy to miss
+because it is seasonally gated. `IsoTree.dropWood` drops `Base.HollyBerry` when the sprite
+name contains `holly`, the log yield is 3 or more, and `ClimateManager` reports the season
+as **Autumn or Winter**, at `1 in roll * 2` per log iteration. Fell a Holly in summer and
+you get nothing, which is not a bug and not a missing drop.
+
+**This mod treats the berry as American Holly's propagule.** It is the botanically correct
+one: *Ilex opaca* is a broadleaf that bears drupes, never cones, and the seed sits inside the
+berry. The seasonal window is a real mechanic rather than an obstacle, and it is the only
+seasonal propagule in the tree set.
+
+Two vanilla facts complicate that and must be handled by the planting change rather than
+ignored.
 
 `Base.HollyBerry` is the game's designated poison berry. In
 `Foraging/Categories/Berries.lua` it is the sole entry in the `poison` group, with
@@ -430,18 +456,28 @@ Its item script carries no poison fields. The poison is applied at forage time b
 berry obtained by chopping a tree is not poisoned while an identical one obtained by
 foraging is. That asymmetry is vanilla behaviour, derived from the files.
 
-Everything about the item points at food and hazard flavour rather than propagation:
-`FoodType = Berry`, `HerbalistType = Berry`, a full `EvolvedRecipe` list, and membership of
-the poison group. Vanilla has no planting system, so there is no planting intent to read
-here at all.
+In vanilla the item is framed purely as food and hazard: `FoodType = Berry`,
+`HerbalistType = Berry`, a full `EvolvedRecipe` list, and membership of the poison group.
+Vanilla has no planting system, so treating it as a seed is this mod's decision and not an
+intent recoverable from the files.
 
-Real *Ilex opaca* can be grown from the seed inside the drupe, so a berry route is not
-absurd, but it is slow and unusual: holly seed has deep double dormancy and commonly takes
-one to three years to germinate, nursery propagation is almost always from cuttings, and
-holly is dioecious so only female trees bear fruit. Treating American Holly as sapling-only
-matches both vanilla intent and horticultural practice. This is a design choice for the
-planting change rather than a fact about the game; see
-[carried forward to later changes](#carried-forward-to-later-changes).
+Real *Ilex opaca* grows from the seed inside the drupe, so the route is botanically sound,
+but it is slow: holly seed has deep double dormancy and commonly takes one to three years to
+germinate, nursery propagation is usually from cuttings, and holly is dioecious so only
+female trees bear fruit. That argues for the berry being a slow path with a sapling graft as
+the fast one, rather than the berry being the only route.
+
+Consequences the planting change has to resolve, recorded here rather than decided:
+
+- Planting a foraged berry means handling a poisoned item, while an identical chopped berry
+  is clean. Either the planting action ignores poison state, or foraged berries need
+  clearing first.
+- The Autumn and Winter gate on chopping means berries are only harvestable from trees for
+  part of the year. Foraging is the year-round fallback, at `months = { 1, 2, 3, 9, 10, 11, 12 }`.
+- Nothing distinguishes a berry meant for eating from one meant for planting, so the UI has
+  to make the choice clear.
+
+See [carried forward to later changes](#carried-forward-to-later-changes).
 
 ### Gaps
 
@@ -485,8 +521,15 @@ declares those sprites without zero padding, as `vegetation_trees_01_8`, `_9`, `
 immediately above uses `_13`, `_14` and `_15` unpadded, and those do match, which is what
 makes the padding look like a typo rather than a convention.
 
-`NEEDS IN-GAME CHECK`: the consequence, that neither Canadian Hemlock nor any legacy pine
-drops a cone.
+`CONFIRMED IN GAME, 2026-09-06`: a Canadian Hemlock drops no cone in vanilla. Observed on
+`e_canadianhemlockJUMBO_1_1`, size 6, log yield 5, in a save without this mod enabled: it
+yielded 4 logs, 1 sapling, 1 large branch, 5 tree branches, 5 twigs and 1 splinters, and no
+cone. The legacy pine half of the claim remains unobserved and is not practically testable,
+since erosion converts `vegetation_trees` sprites on chunk load before they can be chopped.
+
+This mod corrects the Hemlock half behind that option, which is on by default. The legacy
+half is deliberately left alone, because those sprites are size 2 and so never reach the
+block holding the cone line; fixing the padding would change nothing observable.
 
 In practice the legacy branch is doubly unreachable. Every
 `vegetation_trees_01_8` through `_15` tile carries `tree = 2`, which is size 2 and a log
@@ -523,10 +566,11 @@ anywhere in B42.20 beyond furniture naming and these two dead identifiers.
 
 ### What this means for propagation
 
-Ten of the eleven species have no usable seed item. Virginia Pine's cone is the only one,
-and American Holly's berry is a food and poison item rather than a seed. Sapling propagation
-is the only route available for every species, and it is an accepted limitation for the
-first planting release.
+Nine of the eleven species have no propagule item at all. Virginia Pine has its cone and
+American Holly its berry, and this mod treats both as that species' seed. For the remaining
+nine, sapling propagation is the only route, and that is an accepted limitation for the
+first planting release. A sapling graft should stay available for all eleven, since it is
+the only route that works for every species and the only fast one.
 
 The sapling supply itself is uneven. Per
 [what chopping a tree yields](#what-chopping-a-tree-yields), a chopped tree gives no
@@ -601,9 +645,11 @@ so size and log yield are recomputed from the sprite every time the stage or sea
    one, so the object never takes a sprite without the property, and the seasonal variants
    are overlays. See [seasonal sprites](#seasonal-sprites) for the chain. No in-game check
    is needed.
-2. **Neither Canadian Hemlock nor any legacy pine drops a cone. NOT YET TESTED.** Provable
-   from the files for the substring test, the padding mismatch and the size 2 gate; the
-   drop behaviour itself is still unobserved. Check by chopping a Canadian Hemlock.
+2. **Canadian Hemlock drops no cone in vanilla. CONFIRMED in game, 2026-09-06.** Observed
+   on a size 6 Hemlock in a save without this mod enabled. The legacy pine half of the same
+   claim stays unobserved and is not practically testable, because erosion replaces those
+   sprites on chunk load. This mod corrects the Hemlock half; see
+   [cone test defects](#cone-test-defects).
 3. **No stage 0 to 3 tree exists on the authored map before erosion runs. CONFIRMED
    in game, 2026-09-06.** Predicted from the biome files placing only jumbo features, and
    matches what is observed in play: small trees and saplings are not present on the map
@@ -660,41 +706,33 @@ not implemented anywhere yet.
 - **Cone species** is stamped onto `Base.Pinecone`'s modData when harvested from a known
   tree. Cones from vanilla `dropWood` and from foraging stay untagged and fall back to a
   roll weighted by the forage zone they are planted in.
-- **American Holly is sapling-only**, pending confirmation. `Base.HollyBerry` stays a food
-  and poison item and is not a propagule, which matches vanilla intent and real propagation
-  practice, and avoids giving a poison item a second meaning that players would have to
-  learn. If a berry route is wanted later, the natural shape is berry as a very slow route
-  reflecting holly's seed dormancy against sapling as the fast one.
+- **American Holly's propagule is `Base.HollyBerry`.** The drop already exists in vanilla
+  and is gated to Autumn and Winter at `1 in roll * 2` per log, which makes it the only
+  seasonal propagule in the tree set and a mechanic worth keeping rather than smoothing away.
+  A sapling graft should remain the fast route, with the berry as the slow one, reflecting
+  holly's real seed dormancy. The poison state, the seasonal window and the eat-or-plant
+  ambiguity all need resolving; see
+  [the holly berry](#the-holly-berry-and-why-it-is-the-chosen-propagule).
 
-  Sapling-only also sidesteps the classification conflict rather than picking a side. The
-  model reads as a conifer, so a player will expect a cone; the botany says broadleaf, so a
-  cone would be wrong. Giving it neither, and only a sapling, is consistent whichever axis
-  the player is reasoning from. The propagule drop fix should keep this in mind: once
-  Canadian Hemlock starts dropping cones, American Holly will be the visually similar tree
-  that does not, and that will read as an oversight unless it is deliberate.
-- **Propagule drop fix** is a committed feature behind its own setting, defaulting to on.
-  It is one change covering every way `dropWood` fails to give a tree its propagule:
+  American Holly still gets no cone. It is a broadleaf and bears drupes, so a cone would be
+  wrong however much the model looks like a conifer. Expect that to be reported as a bug
+  once Canadian Hemlock starts dropping cones and the visually similar tree next to it does
+  not.
+- **Propagule items for the eight deciduous species** are flagged for future work and not
+  started. None of them has any propagule item in vanilla, so growing one from seed needs
+  `Eelt_` samaras, haws, drupes, pods and nutlets to exist first, with icons and world
+  models. See the [per-species propagule check](#per-species-propagule-check) for what each
+  species would need. This is properly part of the planting change's item work.
+- **The acorn's fate** is unresolved. There is no oak species in B42.20, so restoring an
+  acorn drop has no correct target. The options are to leave `Base.Acorn` foraging-only,
+  which is where it stands today, to attach it to a deciduous species as a stand-in, or to
+  fold it into the propagule items above. See
+  [the acorn is unreachable](#the-acorn-is-unreachable).
 
-  - Canadian Hemlock never drops a cone, because the test is a substring match on `pine`.
-  - The four legacy cone fallbacks are dead from zero padding, and moot anyway because
-    those sprites are size 2.
-  - No tree drops an acorn, because `contains("oak")` matches no sprite and the three
-    working equality tests point at size 2 sprites. See
-    [the acorn is unreachable](#the-acorn-is-unreachable).
-
-  Open question for that change, not settled here: there is no oak species in B42.20, so
-  restoring an acorn drop has no correct target. The options are to leave `Base.Acorn`
-  foraging-only, to attach it to a deciduous species as a stand-in, or to give the eight
-  deciduous species their own propagule items, which the planting system may want regardless.
-  Decide it in that change with the
-  [per-species propagule check](#per-species-propagule-check) in hand.
-
-  The hook point is `ISChopTreeAction:animEvent`, wrapped rather than replaced: vanilla
-  already tests `self.tree:getObjectIndex() == -1` there to detect the tree toppling, so the
-  wrapper can capture the sprite name before delegating and add the drop after. No lua event
-  fires on topple and `toppleTree` and `dropWood` have no lua entry point, so this is the
-  only interception that avoids editing a vanilla file. Known gap: trees felled by a vehicle
-  or by fire do not route through the timed action and will not be corrected.
+The Canadian Hemlock cone drop is no longer carried forward; it shipped as the
+`fix-conifer-cone-drops` change and is controlled by
+`EeltsForestryRemastered.FixConiferConeDrops`. Trees felled by a vehicle or by fire remain
+uncorrected, because they do not route through the chopping action.
 
 ## Tape language flagged for later
 

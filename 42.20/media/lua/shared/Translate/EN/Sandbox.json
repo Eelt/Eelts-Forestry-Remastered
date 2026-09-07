@@ -1,0 +1,5 @@
+{
+    "Sandbox_EeltsForestryRemastered": "Eelt's Forestry Remastered",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops": "Conifers drop cones",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops_tooltip": "Canadian Hemlock drops pine cones when chopped down, on the same terms as Virginia Pine. The base game only gives cones to trees whose sprite name contains \"pine\", so Hemlock never drops any despite being a conifer. Turn this off to restore the base game's behaviour."
+}

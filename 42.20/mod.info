@@ -1,7 +1,7 @@
 name=Eelt's Forestry Remastered
 id=EeltsForestryRemastered
-description=A forestry overhaul for Project Zomboid B42.20 (scope TBD)
-modversion=0.0.1
+description=A forestry overhaul for Project Zomboid B42.20
+modversion=0.1.0
 author=Eelt
 poster=poster.png
 icon=icon.png
