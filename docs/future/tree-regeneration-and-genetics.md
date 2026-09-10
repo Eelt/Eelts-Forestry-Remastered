@@ -1,9 +1,11 @@
 # Tree regeneration and genetics
 
 Future scope for natural tree establishment, inherited autumn timing and management of
-fully grown trees. None of the changes described here is implemented. This records the
-agreed direction and the code that a later OpenSpec proposal must account for; it is not
-an implementation plan with a proven erosion hook.
+fully grown trees. Apart from the two corrected farm species weights, none of the changes
+described here is implemented. This records the agreed direction and the code that a later
+OpenSpec proposal must account for. The erosion question it was originally blocked on is
+answered: the mechanism is a correction pass on `LoadGridsquare`, and it is described under
+natural establishment below.
 
 The existing seed item work remains in [propagule-items.md](propagule-items.md). New
 deciduous propagule assets are separate work, but should use the inheritance rules here
@@ -54,17 +56,27 @@ Paths below are relative to `Project Zomboid.app/Contents/Java/`.
 | `media/lua/server/WorldGen/biomes/map/ph_forest.lua` | Its tree features are exclusively Virginia Pine, with jumbo, XL and XXL probabilities of 0.1, 0.4 and 0.2 |
 | `zombie/erosion/categories/NatureTrees.class`, `update` | Growth depends on global erosion ticks and the category's spawn time and maximum stage |
 | `zombie/erosion/ErosionMain.class` | Erosion speed scales the tick interval; positive erosion days overrides the schedule, and negative erosion days stops progression |
-| `zombie/erosion/ErosionWorld.class`, `validateSpawn` | Calls existing-object replacement before spawn validation and handles multiple erosion categories |
+| `zombie/erosion/ErosionWorld.class`, `validateSpawn` | Calls existing-object replacement before spawn validation, and stops at the first category in a region that claims the square |
+| `zombie/erosion/ErosionMain.class`, `loadGridsquare` | Guards `validateSpawn` behind `if (!square.init)`, so a square's tree decision is taken once and never revisited |
+| `zombie/Lua/LuaManager$Exposer.class`, `shouldExpose` | A `HashSet.contains` against an explicit list. Only `ErosionConfig`, `ErosionMain` and `ErosionSeason` are reachable from lua |
+| `zombie/iso/IsoChunk.class`, `doLoadGridsquare` | Runs `ErosionMain.LoadGridsquare` before firing the lua `LoadGridsquare` event on the same square |
+| `zombie/erosion/obj/ErosionObj.class`, `getObject` | Matches its object by `getName()`, and a null result makes `updateObj` call `clearCatModData` |
 
 Erosion can spawn Virginia Pine, but several soil pools exclude it. The problem is the
 independence of erosion's species selection from biome composition, not a universal absence
 of Pine. The complete pools and stage limits are in the
 [tree matrix](../reference/b42-tree-matrix.md#erosion-respawn).
 
-The [Lua notes](../reference/b42-lua-notes.md#no-lua-event-sees-a-world-object-being-placed-by-the-engine)
-record that engine placement does not raise `OnObjectAdded`, and that the global object
-system's `OnChunkLoaded` callback only concerns chunks it already owns. Neither is a
-proven interception or discovery hook for new erosion trees.
+The [Lua notes](../reference/b42-lua-notes.md#lua-sees-three-erosion-classes-and-no-more)
+now carry the erosion findings in full. Three of them govern this document. Lua cannot name
+`NatureTrees` or the category list, so the category can be neither disabled nor replaced.
+No lua runs before erosion on chunk load, so its placement cannot be intercepted. Renaming a
+tree makes erosion relinquish the square permanently, and since `validateSpawn` never runs
+again there, it can never be reclaimed.
+
+Together these turn the problem around. Erosion is not an ongoing competitor to be
+suppressed; it is a single throwaway decision per square that the mod can overwrite once,
+on the `LoadGridsquare` event it already receives.
 
 ## Initial forest composition audit
 
@@ -201,9 +213,25 @@ would leave stale foliage rather than restore vanilla behaviour.
 
 ### Natural establishment
 
-Replace or intercept vanilla's natural tree establishment so that species follow local
-conditions. New natural trees start at stage 0 and then use the existing elapsed-time
-growth system, subject to the selected growth mode.
+Correct vanilla's natural tree establishment so that species follow local conditions.
+Interception is not available, so the mechanism is a correction pass on `LoadGridsquare`.
+Erosion has already taken its one decision for that square by the time the event fires, and
+it will never take another, so a single pass settles the square for good.
+
+The pass has three outcomes. Where erosion placed a tree of a species the local pool does
+not support, restamp it to a species the pool does support and adopt it. Where erosion
+placed nothing and the mod's own policy wants a tree, plant one at stage 0. Where erosion
+placed nothing and the policy wants nothing, leave the square alone so its other erosion
+categories keep running.
+
+Adoption renames the tree, which is what takes the square off erosion. Nothing else is
+required, and in particular `disableErosion` must not be used. It gates every erosion
+category on the square rather than trees alone, it persists in the save, and lua cannot
+undo it, so a felled tree would leave a square that never recovers and an uninstalled mod
+would leave those squares inert permanently.
+
+New natural trees start at stage 0 and then use the existing elapsed-time growth system,
+subject to the selected growth mode.
 
 Use the same physical ground eligibility as player planting. The current
 `shared/EeltsForestryRemastered_Planting.lua`, `isPlantableSquare`, requires outside ground
@@ -213,6 +241,10 @@ classified as dirt. Natural establishment does not require a player, tool, item 
 Eligible ground receives a small establishment chance paced by erosion settings. Respect
 disabled erosion and the explicit erosion-days override as well as the speed dropdown.
 The actual chance and scheduling formula remain tuning and implementation work.
+`NatureTrees.validateSpawn` rolls `square.rand(x, y, 101)` against
+`spawnChance[square.noiseMainInt]`, which is deterministic per square and available as a
+density reference if the mod's own rate should agree with vanilla's without inheriting its
+species choice.
 
 Nearby eligible trees should influence species selection and provide a parent when
 possible, with the existing biome weights as the fallback. Keep this bounded: seed
@@ -336,11 +368,16 @@ must be defined without rerolling on every attempted planting.
 
 ## Integration work for a proposal
 
-The unresolved erosion ownership mechanism comes first. The relevant code is Java, and no
-Lua override has been established. Investigate a supported integration that suppresses
-only competing natural tree establishment while preserving other erosion categories and
-existing map trees. Do not edit or shadow vanilla files. Adding another spawner beside
-vanilla leaves both the composition defect and duplicate establishment opportunities.
+Erosion ownership is settled and no longer blocks a proposal. Renaming is the mechanism,
+the mod already does it, and no vanilla file is edited or shadowed. The earlier objection
+that a second spawner beside vanilla would leave duplicate establishment opportunities does
+not apply to the correction pass, because vanilla's spawner fires once per square and the
+pass runs after it on that same square.
+
+What replaces it as the first piece of work is the correction pass itself: subscribing to
+`LoadGridsquare`, deciding cheaply whether a square needs anything, and doing nothing at all
+in the common case. The event fires for every square of every chunk load, so the early exit
+governs whether this is affordable. Establish that cost before building policy on top of it.
 
 Tree management then needs separate decisions for identity, seasonal display and size
 progression. Removing the stage-7 adoption guard alone does not remove the stock-mode
@@ -368,10 +405,13 @@ transfer through this path. The server must resolve and validate authoritative i
 before consumption rather than trust a newly supplied client trait table. Include item
 metadata synchronisation, saved trees and late-joining clients in that design.
 
-Use elapsed time and deduplicated area processing for establishment. Player count, scan
-overlap and reloads must not create extra rolls. Define whether unloaded areas accrue
-establishment opportunities, and bound the amount of work and resulting growth on return.
-The current discovery radius is an implementation detail, not an agreed dispersal radius.
+Use elapsed time and deduplicated square processing for establishment. Player count, scan
+overlap and reloads must not create extra rolls. `LoadGridsquare` fires on every chunk load
+rather than only the first, so unlike erosion's own `init` guard the pass gets no free
+once-per-square guarantee and must record that it has settled a square. Define whether
+unloaded areas accrue establishment opportunities, and bound the amount of work and
+resulting growth on return. The current discovery radius is an implementation detail, not an
+agreed dispersal radius.
 
 ## Verification before shipping
 
@@ -382,14 +422,22 @@ The current discovery radius is an implementation detail, not an agreed dispersa
   within each year's autumn. Save and reload without changing the traits.
 - Follow seed inheritance through repeated generations and confirm both variation and
   fixed bounds. Check endpoint parents and siblings separately.
-- Compare natural establishment in known biome pools, including PHForest, and verify that
-  vanilla does not continue introducing a competing species distribution.
+- Compare natural establishment in known biome pools, including PHForest, and confirm the
+  correction pass leaves no square carrying a species its local pool does not support.
+- Revisit corrected squares after several in-game months and confirm erosion has not
+  reasserted a species or a stage on any of them.
+- Watch a chopped erosion tree that the mod never adopted, and confirm whether erosion
+  clears its category data rather than regrowing the tree. This is read from bytecode only.
 - Exercise all three planted-parent settings. Confirm that natural descendants count as
   wild and that existing trees remain after settings change.
 - Check biome crowding limits, erosion speed, erosion days, disabled erosion, overlapping
-  players and area reloads. Confirm that non-tree erosion continues working.
+  players and area reloads. Confirm that grass, bushes and weeds still regrow on squares
+  the mod corrected, and that street and wall erosion is untouched everywhere.
+- Measure the `LoadGridsquare` correction pass while loading unexplored chunks, and confirm
+  the early exit keeps it off the frame budget.
 - Verify item transfer and seasonal appearance in single player and on a dedicated server,
   including a late join and recovery from missing global object state.
 
-No runtime changes or in-game verification accompany this document. Rates, density values,
-mutation size, local weighting and the erosion interception mechanism remain unresolved.
+The two farm species weights are the only runtime change made from this document, and no
+in-game verification accompanies it. Rates, density values, mutation size and local
+weighting remain unresolved. The erosion mechanism no longer does.

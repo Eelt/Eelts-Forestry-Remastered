@@ -269,3 +269,90 @@ season to `ErosionMain.getInstance().getSeasons()`, so both report the same valu
 `ErosionSeason.names` lists six seasons, but `setSeasonData` only ever assigns `curSeason` 1,
 2, 4 and 5. The reachable names are **Spring**, **Early Summer**, **Autumn** and **Winter**.
 `Late Summer` and `Default` never appear.
+
+## Lua sees three erosion classes and no more
+
+`LuaManager$Exposer.shouldExpose` is a `HashSet.contains` against the set built by explicit
+`setExposed` calls in `exposeAll`. There is no package scan and no transitive exposure of
+return types, so a class absent from that list cannot be named from lua at all. From
+`zombie.erosion` the list holds only `ErosionConfig` with its four nested classes,
+`ErosionMain`, and `season/ErosionSeason`.
+
+`ErosionRegions`, `ErosionRegions$Region`, `ErosionCategory`, `NatureTrees`, `ErosionWorld`
+and `ErosionData` are all absent. That closes every route to the category list: `regions` is
+a public static `ArrayList` and `Region.categories` is public, but neither can be reached.
+Nor could a replacement be installed if they were, since the game's lua cannot subclass an
+abstract java class, and `NatureTrees` keeps `soilRef`, `spawnChance` and `trees` private
+final.
+
+`ErosionConfig` is exposed but offers nothing here. Its `Seeds`, `Time` and `Season` fields
+are package private with no getters, and none of them concern trees.
+
+## Erosion decides a square's trees once, at first init
+
+`ErosionMain.loadGridsquare` calls `ErosionWorld.validateSpawn` behind an
+`if (!square.init)` guard, and `initGridSquare` sets `init`. `ErosionWorld.update` only
+iterates the `ErosionCategory$Data` entries that `validateSpawn` already created. Nothing
+else calls `validateSpawn`, and the periodic path reaches the same method: `updateMapNow`,
+driven by `mainTimer` and `EveryTenMinutes`, calls `loadGridsquare` per square.
+
+So natural tree establishment is one decision per square, taken the first time that square
+is erosion loaded, and never revisited. There is no ongoing vanilla spawner competing with
+a mod's own placement.
+
+Within a region the first category to claim a square wins: `ErosionWorld.validateSpawn`
+breaks out of the category loop as soon as one returns true. `NatureTrees` is category 0 of
+region 0, so a square it takes is one `NatureBush`, `NaturePlants` and `NatureGeneric` can
+never touch, and a square they take can never grow an erosion tree.
+
+`NatureTrees.validateSpawn` refuses any square holding more than one object, reads the
+species pool from `soilRef[square.soil]`, and spawns only when `square.rand(x, y, 101)` falls
+under `spawnChance[square.noiseMainInt]`. The roll is deterministic from the square's
+position and noise.
+
+## No lua runs before erosion on chunk load
+
+`IsoChunk.doLoadGridsquare` calls `ErosionMain.LoadGridsquare(square)` and then, on the same
+square in the same loop iteration, fires the lua `LoadGridsquare` event:
+
+```
+847: invokestatic  zombie/erosion/ErosionMain.LoadGridsquare(IsoGridSquare)
+880: ldc_w         "LoadGridsquare"
+885: invokestatic  zombie/Lua/LuaEventManager.triggerEvent(String, Object)
+```
+
+Lua always arrives after erosion has placed whatever it placed. Interception is impossible;
+correcting the result on `LoadGridsquare` is the only option, and because the decision is
+never revisited, correcting it once per square is permanent. Erosion is skipped entirely
+when the chunk's `jobType` is `SoftReset`.
+
+## Renaming a tree takes its square off erosion for good
+
+`ErosionObj.getObject` walks the square's objects and matches on
+`this.name.equals(object.getName())`, returning null when nothing matches. Once
+`ErosionCategory$Data.hasSpawned` is set, `updateObj` calls it on any change of stage,
+season or bloom, and a null result runs `clearCatModData(square)`, which drops the category
+data from `square.regions`.
+
+Renaming a tree therefore severs erosion ownership permanently, since `validateSpawn` cannot
+run again to reclaim the square. The mod's `ADOPTED_NAME` rename already does this. The same
+path should clear a chopped erosion tree that was never renamed, though that has not been
+watched in game.
+
+The relinquish is lazy. It happens on the first update where the displayed stage, season or
+bloom actually changes; until then the stale data sits inert and `hasSpawned` keeps it from
+placing anything.
+
+## `disableErosion` is a one way switch for the whole square
+
+`IsoGridSquare:disableErosion()` sets `ErosionData$Square.doNothing`, which `loadGridsquare`
+checks before reaching `ErosionWorld.update`. That gates every erosion category on the
+square, not only trees, and `Square.save` persists it as a flag bit. `reset()` clears it but
+lives on the unexposed `ErosionData$Square`, so lua can never undo it and an uninstalled mod
+would leave the square inert for good. Vanilla sets the same flag itself on any square no
+category claimed.
+
+`removeErosionObject` reads as a general escape hatch but compares its argument against
+`"WallVines"` and silently ignores anything else.
+
+Given the rename above, none of this is needed to take a tree from erosion.
