@@ -356,3 +356,41 @@ category claimed.
 `"WallVines"` and silently ignores anything else.
 
 Given the rename above, none of this is needed to take a tree from erosion.
+
+## Erosion has no succession between its nature categories
+
+Region 0 carries the whole vegetation ladder, and each category owns its own sprite families:
+
+| Category | Places |
+|---|---|
+| `NatureGeneric` | `e_newgrass_1_`, `blends_grassoverlays_01`, ferns |
+| `NaturePlants` | `d_plants_1_`, `vegetation_groundcover_01_` |
+| `NatureBush` | `f_bushes_1_`, `vegetation_foliage` |
+| `NatureTrees` | the eleven tree tilesets |
+
+Exactly one of them owns a square. `ErosionWorld.validateSpawn` breaks out of the category
+loop at the first claim, and `validateSpawn` never runs again for that square, so the
+assignment is permanent. `clearCatModData` removes only the entry matching its own
+`regionId` and `categoryId`, but since only one category ever claimed, dropping it empties
+region 0 for that square with no way to refill it.
+
+Nothing promotes a square from one category to the next. Grass never becomes bush, bush
+never becomes tree, and a square that loses its object keeps nothing in its place. Felling a
+tree is a permanent reduction in vegetation, and a cleared field stays cleared.
+
+`IsoChunk.CheckGrassRegrowth` is not a general counterexample. It only visits zones whose
+type is `GrassRegrowth` and paces itself with `SandboxOptions.animalGrassRegrowTime`, so it
+is the animal pasture mechanic rather than vegetation recovery.
+
+## `placeObject` does not check whether the square is occupied
+
+`ErosionObj.placeObject` calls `createObject`, then `setStageObject`, then adds the result
+straight to the square. Nothing on that path asks what is already there. The occupancy test
+lives in `NatureTrees.validateSpawn`, which refuses a square holding more than one object,
+and that runs at claim time only.
+
+`validateSpawn` sets `spawnTime` to `130 - noiseMainInt`, and `update` places nothing until
+`eTicks` reaches it, so a claimed square can sit empty for a long stretch of a young world.
+Anything placed there in the meantime does not stop erosion adding its own tree on top when
+the tick arrives. Lua cannot see the pending claim, since `ErosionCategory$Data` is not
+exposed.

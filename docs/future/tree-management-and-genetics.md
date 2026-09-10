@@ -1,11 +1,17 @@
-# Tree regeneration and genetics
+# Tree management and genetics
 
-Future scope for natural tree establishment, inherited autumn timing and management of
-fully grown trees. Apart from the two corrected farm species weights, none of the changes
-described here is implemented. This records the agreed direction and the code that a later
-OpenSpec proposal must account for. The erosion question it was originally blocked on is
-answered: the mechanism is a correction pass on `LoadGridsquare`, and it is described under
-natural establishment below.
+Future scope for taking trees off vanilla erosion, managing them independently of growth,
+and giving them a genetic identity that survives grafting and reseeding. Apart from the two
+corrected farm species weights, none of the changes described here is implemented.
+
+The erosion question this work was originally blocked on is answered. Lua cannot disable or
+replace `NatureTrees`, but it does not need to: erosion decides a square once and renaming a
+tree takes that square off it permanently. The boundary layer below is what remains of the
+problem.
+
+Vegetation recovering over time, tree establishment and crowding ceilings moved out to
+[vegetation-succession.md](vegetation-succession.md), which is the larger piece of work and
+depends on the boundary layer here. The species audit further down feeds both documents.
 
 The existing seed item work remains in [propagule-items.md](propagule-items.md). New
 deciduous propagule assets are separate work, but should use the inheritance rules here
@@ -211,135 +217,51 @@ how disabled correction displays vanilla seasons on a tree already owned by the 
 Renaming currently makes erosion relinquish the tree, so simply stopping overlay updates
 would leave stale foliage rather than restore vanilla behaviour.
 
-### Natural establishment
+### The erosion boundary layer
 
-Correct vanilla's natural tree establishment so that species follow local conditions.
-Interception is not available, so the mechanism is a correction pass on `LoadGridsquare`.
-Erosion has already taken its one decision for that square by the time the event fires, and
-it will never take another, so a single pass settles the square for good.
+Every square enters the mod's world through vanilla erosion first, and lua cannot get ahead
+of it. `IsoChunk.doLoadGridsquare` runs `ErosionMain.LoadGridsquare` and then fires the lua
+`LoadGridsquare` event on the same square in the same loop iteration, so the mod always
+arrives after erosion has placed whatever it placed.
 
-The pass has three outcomes. Where erosion placed a tree of a species the local pool does
-not support, restamp it to a species the pool does support and adopt it. Where erosion
-placed nothing and the mod's own policy wants a tree, plant one at stage 0. Where erosion
-placed nothing and the policy wants nothing, leave the square alone so its other erosion
-categories keep running.
+That is survivable because erosion's decision is a one shot. `validateSpawn` sits behind an
+`if (!square.init)` guard and `ErosionWorld.update` only ever revisits category data that
+already exists. Handle a square once and it is settled for good.
 
-Adoption renames the tree, which is what takes the square off erosion. Nothing else is
-required, and in particular `disableErosion` must not be used. It gates every erosion
-category on the square rather than trees alone, it persists in the save, and lua cannot
-undo it, so a felled tree would leave a square that never recovers and an uninstalled mod
-would leave those squares inert permanently.
+The boundary layer therefore discards vanilla's decision rather than negotiating with it.
+On first sight of a square, delete whatever erosion put there and ask the mod's own policy
+what belongs, using the mod's species weights, stage distribution and genetics. Vanilla's
+choice contributes nothing beyond having been the trigger. What the policy decides is the
+subject of [vegetation-succession.md](vegetation-succession.md); the boundary layer only has
+to make sure the answer is the mod's.
 
-New natural trees start at stage 0 and then use the existing elapsed-time growth system,
-subject to the selected growth mode.
+Adoption renames the tree, and the rename is what takes the square off erosion. Nothing
+further is required. In particular `disableErosion` must not be used: it gates every erosion
+category on the square rather than trees alone, it persists in the save, and lua cannot undo
+it, so an uninstalled mod would leave those squares inert permanently.
 
-Use the same physical ground eligibility as player planting. The current
-`shared/EeltsForestryRemastered_Planting.lua`, `isPlantableSquare`, requires outside ground
-at z=0, no building or existing tree, a free square, no water or farming crop, and ground
-classified as dirt. Natural establishment does not require a player, tool, item or tape.
+Two constraints on the pass itself:
 
-Eligible ground receives a small establishment chance paced by erosion settings. Respect
-disabled erosion and the explicit erosion-days override as well as the speed dropdown.
-The actual chance and scheduling formula remain tuning and implementation work.
-`NatureTrees.validateSpawn` rolls `square.rand(x, y, 101)` against
-`spawnChance[square.noiseMainInt]`, which is deterministic per square and available as a
-density reference if the mod's own rate should agree with vanilla's without inheriting its
-species choice.
+- `LoadGridsquare` fires on every chunk load, not only the first, so unlike erosion the pass
+  gets no free once per square guarantee and must record which squares it has settled.
+- The event fires for every square of every chunk load, so the early exit in the common case
+  governs whether this is affordable at all. Establish that cost before building policy on
+  top of it.
 
-Nearby eligible trees should influence species selection and provide a parent when
-possible, with the existing biome weights as the fallback. Keep this bounded: seed
-dispersal objects, pollination simulation and ancestry tracking are not required.
+#### The unplaced claim problem
 
-A proposed implementation is to adjust biome species weights with a limited local
-contribution, choose a species, then choose a nearby eligible parent of that species.
-If no such parent exists, initialise genetics without a parent. The mixing formula,
-influence radius and eligible parent sizes remain open. A single parent is sufficient
-for this model.
+`NatureTrees.validateSpawn` claims a square immediately but sets `spawnTime` to
+`130 - noiseMainInt`, and `update` places nothing until `eTicks` reaches it. A claimed square
+can therefore sit visibly empty for a long stretch of a young world.
 
-### Player-planted trees as parents
+`ErosionObj.placeObject` does not check occupancy. Anything the mod puts on such a square
+does not stop erosion adding its own tree on top when the tick finally arrives, and lua
+cannot see the pending claim because `ErosionCategory$Data` is not exposed.
 
-Provide a three-value sandbox dropdown:
-
-| Value | Behaviour |
-|---|---|
-| Disabled, default | Directly player-planted trees do not influence species selection or serve as parents for natural regeneration |
-| Native species only | Directly player-planted trees contribute only when their species has positive weight in the destination biome's species pool |
-| All species | Directly player-planted trees may contribute outside their normal biome, with the same local influence, ground and crowding restrictions |
-
-For an undocumented zone, the proposed default for Native species only is to exclude a
-player-planted tree unless a known species pool establishes that it is native there.
-
-Naturally established offspring count as wild immediately, even when their parent was
-player-planted. Do not retain player-planted ancestry. Those descendants can subsequently
-contribute as wild trees regardless of the dropdown, including after it is changed back
-to Disabled. They do not qualify for planted-only growth. Changing the setting governs
-future establishment and does not remove existing trees.
-
-### Biome crowding
-
-Natural establishment must have biome-specific crowding limits. Deep Forest should be
-substantially denser than regular Forest. Primary Forest and Organic Forest were suggested
-as intermediate cases. The English translations confirm that these names correspond to
-`DeepForest`, `Forest`, `PRForest` and `OrganicForest` respectively. The map file
-`primary_forest.lua` supplies Deep Forest, despite its name. Exact density tiers remain
-unassigned; the species audit above measures composition rather than crowding.
-
-A small minimum spacing plus a wider neighbourhood density limit is a proposed way to
-express crowding. Exact radii, counts and boundary treatment remain open. Trees excluded
-as parents should still count as physical crowding. The scope adds limits to natural
-establishment; it does not change player planting spacing or thin existing forests.
-
-#### What vanilla establishes about crowding
-
-The proposed ordering above is a gameplay preference, not a verified vanilla density
-hierarchy. The English label for `DeepForest` is Deep Forest, not Dense Forest. The four
-names alone do not establish trees per area.
-
-The installed `media/lua/shared/Foraging/forageZones.lua` defines these values:
-
-| Forage zone | Item density minimum and maximum | Daily refill percent |
-|---|---|---|
-| Primary Forest, `PRForest` | 6 to 8 | 5 |
-| Organic Forest, `OrganicForest` | 8 to 10 | 5 |
-| Forest, `Forest` | 8 to 10 | 7 |
-| Deep Forest, `DeepForest` | 8 to 10 | 7 |
-
-These are forage item parameters. `forageSystem.fillZone` scales the density draw by zone
-area and writes `itemsLeft` and `itemsTotal`; `checkRefillZone` restores that item budget.
-They do not place trees or measure canopy cover. Organic Forest shares the same base item
-density range as Forest and Deep Forest, while Primary Forest has a lower range. Neither
-result supplies a tree crowding limit.
-
-The authored-map tree features establish a different comparison. Shares below are among
-tree selections before placement failures, using the same audit method as above:
-
-| Biome | Jumbo, stages 4 and 5 | XL, stage 6 | XXL, stage 7 |
-|---|---|---|---|
-| Primary Forest | 50% | 33.3% | 16.7% |
-| Organic Forest | 30% | 30% | 40% |
-| Deep Forest, authored branch | 0% | 52.6% | 47.4% |
-| Plain Forest | No single tree mixture identified | No single tree mixture identified | No single tree mixture identified |
-
-Primary Forest favours smaller stages within the mature tree range and contains Redbud,
-Hawthorn and Silverbell. Organic Forest contains Dogwood, Redmaple and Linden with a larger
-XXL share. Authored Deep Forest contains only XL and XXL variants, mainly Hemlock and
-Holly. The tree subbiome for Primary Forest specifies bushes; Organic Forest specifies
-grass; authored Deep Forest specifies bushes. These are further differences in vegetation
-structure, not a numeric density ordering. Both Primary and Organic Forest have the same
-`FOREST` landscape, `MEDIUM` temperature and `DRY`/`RAIN` hygrometry declarations, so these
-parameters do not justify treating Organic Forest as a wetter or denser tier either.
-
-Initial map tree positions, feature footprints, placement restrictions and subbiome
-replacement all affect the resulting number of trunks. Larger tree art also changes how
-dense a forest looks without proving more trunks per area. Deep Forest's procedural branch
-and plain Forest's missing single mixture prevent an exact four-way density comparison
-from these definitions alone.
-
-Before claiming vanilla-derived crowding limits, count trunks in multiple equal-area
-samples within the four forage zones on a fresh map. Record canopy cover separately, avoid
-mixed-zone boundaries, and distinguish authored from procedural Deep Forest. Until that
-measurement exists, leave the intermediate placement of Primary and Organic Forest open
-and label any assigned limits as mod tuning.
+This is not only a future concern. The current planting feature can hit it today: plant on
+bare ground early in a world and an erosion tree may appear on the same square months later.
+Confirm the stacking in game before designing around it. A sweep that reconciles a square
+holding two trees is the obvious fallback, but it is a cleanup rather than a fix.
 
 ### Inherited autumn timing
 
@@ -369,25 +291,23 @@ must be defined without rerolling on every attempted planting.
 ## Integration work for a proposal
 
 Erosion ownership is settled and no longer blocks a proposal. Renaming is the mechanism,
-the mod already does it, and no vanilla file is edited or shadowed. The earlier objection
-that a second spawner beside vanilla would leave duplicate establishment opportunities does
-not apply to the correction pass, because vanilla's spawner fires once per square and the
-pass runs after it on that same square.
+the mod already does it, and no vanilla file is edited or shadowed.
 
-What replaces it as the first piece of work is the correction pass itself: subscribing to
-`LoadGridsquare`, deciding cheaply whether a square needs anything, and doing nothing at all
-in the common case. The event fires for every square of every chunk load, so the early exit
-governs whether this is affordable. Establish that cost before building policy on top of it.
+The boundary layer is the first piece of work, because everything else waits on it.
+Subscribe to `LoadGridsquare`, decide cheaply whether a square has already been settled, and
+do nothing at all in the common case. Establish that cost before building policy on top of
+it, and record which squares are settled since the event gives no once per square guarantee
+of its own.
 
 Tree management then needs separate decisions for identity, seasonal display and size
 progression. Removing the stage-7 adoption guard alone does not remove the stock-mode
 early return or planted-only discovery restriction. Seasonal-only ownership must also
 preserve the selected growth behaviour rather than accidentally suppress stock growth.
 
-Move the biome species policy out of item-specific selection so planting and regeneration
-share it. The current `rollSpecies` fallback chooses any eligible item species uniformly
-when no local match exists. That convenience for planting an item is not automatically
-an appropriate natural regeneration policy for an unknown zone.
+Move the biome species policy out of item-specific selection so planting and
+[succession](vegetation-succession.md) share it. The current `rollSpecies` fallback chooses
+any eligible item species uniformly when no local match exists. That convenience for
+planting an item is not automatically an appropriate policy for an unknown zone.
 
 The global object system currently persists `tileset`, `stage`, `enteredHour`, `planted`
 and `overlaySeason`. Its recovery path `stateFromIsoObject` reconstructs species and stage
@@ -405,13 +325,9 @@ transfer through this path. The server must resolve and validate authoritative i
 before consumption rather than trust a newly supplied client trait table. Include item
 metadata synchronisation, saved trees and late-joining clients in that design.
 
-Use elapsed time and deduplicated square processing for establishment. Player count, scan
-overlap and reloads must not create extra rolls. `LoadGridsquare` fires on every chunk load
-rather than only the first, so unlike erosion's own `init` guard the pass gets no free
-once-per-square guarantee and must record that it has settled a square. Define whether
-unloaded areas accrue establishment opportunities, and bound the amount of work and
-resulting growth on return. The current discovery radius is an implementation detail, not an
-agreed dispersal radius.
+The hourly `adoptNearPlayers` scan is a discovery mechanism, not a dispersal radius. Once the
+boundary layer settles squares as they load, decide whether the scan still earns its place
+or whether it only covers trees that predate the mod being installed.
 
 ## Verification before shipping
 
@@ -422,22 +338,21 @@ agreed dispersal radius.
   within each year's autumn. Save and reload without changing the traits.
 - Follow seed inheritance through repeated generations and confirm both variation and
   fixed bounds. Check endpoint parents and siblings separately.
-- Compare natural establishment in known biome pools, including PHForest, and confirm the
-  correction pass leaves no square carrying a species its local pool does not support.
-- Revisit corrected squares after several in-game months and confirm erosion has not
+- Confirm the boundary layer leaves no square carrying a species its local pool does not
+  support, in known biome pools including PHForest.
+- Revisit settled squares after several in-game months and confirm erosion has not
   reasserted a species or a stage on any of them.
 - Watch a chopped erosion tree that the mod never adopted, and confirm whether erosion
   clears its category data rather than regrowing the tree. This is read from bytecode only.
-- Exercise all three planted-parent settings. Confirm that natural descendants count as
-  wild and that existing trees remain after settings change.
-- Check biome crowding limits, erosion speed, erosion days, disabled erosion, overlapping
-  players and area reloads. Confirm that grass, bushes and weeds still regrow on squares
-  the mod corrected, and that street and wall erosion is untouched everywhere.
-- Measure the `LoadGridsquare` correction pass while loading unexplored chunks, and confirm
-  the early exit keeps it off the frame budget.
+- Plant on bare ground early in a fresh world and watch for an erosion tree appearing on the
+  same square later. This is the unplaced claim case and has not been seen in game.
+- Check erosion speed, erosion days, disabled erosion, overlapping players and area reloads.
+  Confirm that street and wall erosion is untouched everywhere.
+- Measure the boundary layer while loading unexplored chunks, and confirm the early exit
+  keeps it off the frame budget.
 - Verify item transfer and seasonal appearance in single player and on a dedicated server,
   including a late join and recovery from missing global object state.
 
 The two farm species weights are the only runtime change made from this document, and no
-in-game verification accompanies it. Rates, density values, mutation size and local
-weighting remain unresolved. The erosion mechanism no longer does.
+in-game verification accompanies it. Mutation size and the boundary layer's cost remain
+unresolved. The erosion mechanism no longer does.

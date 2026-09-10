@@ -25,9 +25,13 @@ to build the thing.
   shipped are now described.
 - [propagule-items.md](future/propagule-items.md) is the item by item design for the seed
   items the eight deciduous species would need, with the art each one costs.
-- [tree-regeneration-and-genetics.md](future/tree-regeneration-and-genetics.md) scopes
-  biome-based natural establishment, inherited autumn timing and seasonal management
-  independent of tree growth.
+- [tree-management-and-genetics.md](future/tree-management-and-genetics.md) scopes the
+  boundary layer that takes a square off vanilla erosion, seasonal management independent of
+  tree growth, and inherited autumn timing. It also holds the initial forest composition
+  audit that the species weights come from.
+- [vegetation-succession.md](future/vegetation-succession.md) scopes vegetation recovering
+  over time on cleared, burned or felled ground, and the biome crowding ceilings that stop
+  it. Vanilla has no succession of its own, so this is the larger piece of work.
 
 ## Which folder
 
