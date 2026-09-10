@@ -75,6 +75,21 @@ function Eelt_STreeGrowthSystem:adoptTree(square, tree)
     luaObject:stateToIsoObject(tree)
 end
 
+-- Planting adopts on the spot; adoptNearPlayers only runs under the all trees setting,
+-- which is the one setting a planted tree does not need
+function Eelt_STreeGrowthSystem:adoptPlantedTree(square, tree, tileset)
+    local sprites = EeltsForestryRemastered_TreeGrowthSprites
+    if not sprites.getBase(tileset, 0) then return nil end
+    if self:getLuaObjectOnSquare(square) then return nil end
+
+    tree:setName(sprites.ADOPTED_NAME)
+
+    local luaObject = self:newLuaObjectOnSquare(square)
+    luaObject:adoptFrom(tree, tileset, 0, true)
+    luaObject:stateToIsoObject(tree)
+    return luaObject
+end
+
 -- SGlobalObjectSystem:OnChunkLoaded only fires for chunks this system already owns,
 -- and no lua event sees a tree being placed, so adoption rides the hourly tick
 function Eelt_STreeGrowthSystem:adoptNearPlayers()

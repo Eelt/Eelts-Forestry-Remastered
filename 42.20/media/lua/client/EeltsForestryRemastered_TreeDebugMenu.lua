@@ -1,3 +1,5 @@
+require "EeltsForestryRemastered_Planting"
+
 local PREFIX = "Eelt's Forestry Remastered: "
 
 local function describe(tree)
@@ -120,12 +122,42 @@ local function isDebugAllowed(player)
     return isDebugEnabled()
 end
 
-local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
-    if test or not isDebugAllowed(player) then return end
+local function findSquare(worldobjects)
+    for i = 1, worldobjects and #worldobjects or 0 do
+        local square = worldobjects[i] and worldobjects[i]:getSquare()
+        if square then return square end
+    end
+    return nil
+end
 
-    local tree = findTree(worldobjects)
-    if not tree then return end
+local function describePropagules(worldobjects, playerObj)
+    local propagules = EeltsForestryRemastered_Propagules
+    local found = 0
+    local items = playerObj:getInventory():getItems()
+    for i = 0, items and items:size() - 1 or -1 do
+        local item = items:get(i)
+        if propagules.isPlantable(item) then
+            found = found + 1
+            local poison = instanceof(item, "Food") and item:getPoisonPower() or 0
+            print(string.format("%s%s species=%s poison=%d", PREFIX, item:getFullType(),
+                tostring(propagules.getSpecies(item)), poison))
+        end
+    end
+    if found == 0 then print(PREFIX .. "no propagules carried") end
+end
 
+local function plantSpecies(worldobjects, playerObj, square, tileset)
+    if EeltsForestryRemastered_TreePlanting then
+        EeltsForestryRemastered_TreePlanting.plantTree(square, tileset)
+        return
+    end
+
+    local planting = EeltsForestryRemastered_Planting
+    sendClientCommand(playerObj, planting.MODULE, planting.PLANT_COMMAND,
+        { x = square:getX(), y = square:getY(), z = square:getZ(), species = tileset })
+end
+
+local function addTreeOptions(context, tree)
     local option = context:addOption("Eelt's Forestry Remastered Debuggers", tree, nil)
     local submenu = ISContextMenu:getNew(context)
     context:addSubMenu(option, submenu)
@@ -134,6 +166,34 @@ local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
     submenu:addOption("Inspect this tree", tree, describe)
     submenu:addOption("Skip one month", tree, skipMonth)
     submenu:addOption("Force a growth tick", tree, forceTick)
+end
+
+local function addPlantingOptions(context, worldobjects, playerObj, square)
+    local option = context:addOption("Eelt's Forestry Remastered Planting", nil, nil)
+    local submenu = ISContextMenu:getNew(context)
+    context:addSubMenu(option, submenu)
+
+    submenu:addOption("Inspect held propagules", worldobjects, describePropagules, playerObj)
+
+    local speciesOption = submenu:addOption("Plant a species here", nil, nil)
+    local speciesMenu = ISContextMenu:getNew(submenu)
+    submenu:addSubMenu(speciesOption, speciesMenu)
+
+    for _, tileset in ipairs(EeltsForestryRemastered_TreeGrowthSprites.species) do
+        speciesMenu:addOption(EeltsForestryRemastered_Planting.speciesName(tileset),
+            worldobjects, plantSpecies, playerObj, square, tileset)
+    end
+end
+
+local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
+    if test or not isDebugAllowed(player) then return end
+
+    local tree = findTree(worldobjects)
+    if tree then addTreeOptions(context, tree) end
+
+    local square = findSquare(worldobjects)
+    local playerObj = getSpecificPlayer(player)
+    if square and playerObj then addPlantingOptions(context, worldobjects, playerObj, square) end
 end
 
 Events.OnFillWorldObjectContextMenu.Add(onFillWorldObjectContextMenu)

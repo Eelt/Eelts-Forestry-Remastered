@@ -95,14 +95,22 @@ end
 function Eelt_STreeGrowthObject:applyOverlay(isoObject)
     local sprites = EeltsForestryRemastered_TreeGrowthSprites
     local attached = isoObject:getAttachedAnimSprite()
-    if not attached then return end
+    if attached then attached:clear() end
 
-    attached:clear()
     local spriteName = self.tileset and sprites.getOverlay(self.tileset, self.stage, self:displaySeason())
     if not spriteName then return end
 
     local sprite = getSprite(spriteName)
-    if sprite then attached:add(sprite:newInstance()) end
+    if not sprite then return end
+
+    -- A tree built by IsoTree.new has no overlay list, only an engine placed one does
+    if not attached then
+        isoObject:setAttachedAnimSprite(ArrayList.new())
+        attached = isoObject:getAttachedAnimSprite()
+        if not attached then return end
+    end
+
+    attached:add(sprite:newInstance())
 end
 
 function Eelt_STreeGrowthObject:refreshOverlay()

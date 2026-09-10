@@ -1,8 +1,8 @@
 {
     "Sandbox_EeltsForestryRemastered": "Eelt's Forestry Remastered",
 
-    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops": "Conifers drop cones",
-    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops_tooltip": "Canadian Hemlock drops pine cones when chopped down, on the same terms as Virginia Pine. The base game only gives cones to trees whose sprite name contains \"pine\", so Hemlock never drops any despite being a conifer. Turn this off to restore the base game's behaviour.",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops": "Canadian Hemlock cone drop fix",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops_tooltip": "Makes Canadian Hemlock drop pine cones when chopped, on the same terms as Virginia Pine. The base game gives it none.",
 
     "Sandbox_EeltsForestryRemastered_TreeGrowth": "Tree growth",
     "Sandbox_EeltsForestryRemastered_TreeGrowth_tooltip": "Whether trees grow over time. The base game caps naturally spawned trees well below full size and drives their growth from a single world-wide counter, so forests never mature. Set this to the base game's behaviour to leave every tree alone.",
@@ -11,5 +11,8 @@
     "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option3": "All trees grow",
 
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier": "Tree growth time",
-    "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long a tree takes to grow, as a multiplier. At 1.0 a tree goes from a fresh sapling to the largest size in roughly three in-game months. Higher values take longer, lower values are faster."
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long a tree takes to grow, as a multiplier. At 1.0 a tree goes from a fresh sapling to the largest size in roughly three in-game months. Higher values take longer, lower values are faster.",
+
+    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape": "Require 'Tree Planting Guide' for planting",
+    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape_tooltip": "If checked, you must watch the \"Home VHS: Tree Planting Guide\" tape before you can plant trees."
 }

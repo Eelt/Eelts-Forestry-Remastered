@@ -3,5 +3,6 @@
 # Local tooling, not part of the mod
 .serena/
 .claude/
+.agents/
 CLAUDE.md
 AGENTS.md
