@@ -41,10 +41,11 @@ propagules.zoneSpecies = {
         ["e_redmaple_1"] = 0.35,
         ["e_americanlinden_1"] = 0.3,
     },
+    -- Vanilla's yellowwood_jumbo_xl feature holds a silverbell sprite, so its mass counts as silverbell
     FarmForest = {
-        ["e_yellowwood_1"] = 0.35,
+        ["e_yellowwood_1"] = 0.25,
         ["e_redmaple_1"] = 0.35,
-        ["e_carolinasilverbell_1"] = 0.3,
+        ["e_carolinasilverbell_1"] = 0.4,
     },
     DeepForest = {
         ["e_canadianhemlock_1"] = 0.35,
@@ -58,9 +59,9 @@ propagules.zoneSpecies = {
 
 -- Three zones share farmmix_forest
 local farmMix = {
-    ["e_yellowwood_1"] = 0.18,
+    ["e_yellowwood_1"] = 0.13,
     ["e_redmaple_1"] = 0.35,
-    ["e_carolinasilverbell_1"] = 0.15,
+    ["e_carolinasilverbell_1"] = 0.2,
     ["e_dogwood_1"] = 0.22,
     ["e_americanlinden_1"] = 0.15,
 }

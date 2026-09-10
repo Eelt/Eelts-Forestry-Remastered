@@ -116,8 +116,8 @@ rounded and can sum to 99.9 or 100.1.
 | Primary Forest | `PRForest`, `pr_forest` | Redbud 33.3%, Hawthorn 33.3%, Silverbell 33.3% | Matches |
 | Birch Mixed Forest | `BirchMixForest`, `birchmix_forest` | Riverbirch 44.4%, Redmaple 20%, Dogwood 18.9%, Linden 16.7% | Matches |
 | Organic Forest | `OrganicForest`, `organic_forest` | Dogwood 35%, Redmaple 35%, Linden 30% | Matches |
-| Managed Forestry | `FarmForest`, `farm_forest` | Silverbell 40%, Redmaple 35%, Yellowwood 25% | Mod has Silverbell 30%, Redmaple 35%, Yellowwood 35% |
-| Farmland Forest and Farmland | `FarmMixForest`, `Farm`, `FarmLand`, all `farmmix_forest` | Redmaple 35%, Dogwood 22%, Silverbell 20%, Yellowwood 13%, Linden 10% | Mod normalises to Redmaple 33.3%, Dogwood 21%, Yellowwood 17.1%, Silverbell 14.3%, Linden 14.3% |
+| Managed Forestry | `FarmForest`, `farm_forest` | Silverbell 40%, Redmaple 35%, Yellowwood 25% | Matches since the 2026-09-09 correction |
+| Farmland Forest and Farmland | `FarmMixForest`, `Farm`, `FarmLand`, all `farmmix_forest` | Redmaple 35%, Dogwood 22%, Silverbell 20%, Yellowwood 13%, Linden 10% | Mod normalises to Redmaple 33.3%, Dogwood 21%, Silverbell 19%, Linden 14.3%, Yellowwood 12.4% since the 2026-09-09 correction |
 | Deep Forest, authored branch | `DeepForest`, `primary_forest`, pixel 255 | Hemlock 36.8%, Holly 36.8%, Redmaple 10.5%, Dogwood 10.5%, Linden 5.3% | Matches this branch only |
 
 The existing `zoneSpecies` entries match the feature-name sums for all ten defined tree
@@ -129,12 +129,17 @@ Vanilla's `features/tree/yellowwood_jumbo_xl.lua` actually contains
 `e_carolinasilverbellJUMBOXL_1_0`. Its jumbo and XXL variants resolve to Yellowwood. Counting
 the XL feature as Yellowwood therefore overstates Yellowwood and understates Silverbell.
 
-In Managed Forestry, move 0.10 of the declared mass from Yellowwood to Silverbell. The
+In Managed Forestry, 0.10 of the declared mass moves from Yellowwood to Silverbell. The
 result is Yellowwood 0.25, Silverbell 0.40 and Redmaple 0.35.
 
 In the farmland mixture, the same feature carries 0.05. Resolving it gives Yellowwood
-0.13, Silverbell 0.20, Redmaple 0.35, Dogwood 0.22 and Linden 0.15, totalling 1.05. Simply
-normalising those corrected masses would give 12.4%, 19%, 33.3%, 21% and 14.3% respectively.
+0.13, Silverbell 0.20, Redmaple 0.35, Dogwood 0.22 and Linden 0.15, totalling 1.05.
+Normalising those corrected masses gives 12.4%, 19%, 33.3%, 21% and 14.3% respectively.
+
+Both corrections were applied to `zoneSpecies` on 2026-09-09. `rollSpecies` divides by the
+summed weight of the species a given item may become, not by the table total, so leaving
+the farmland entries summing to 1.05 is intended and the normalised shares above are what
+an unmarked sapling actually rolls.
 
 That is not the unrestricted vanilla selection. The last feature is Linden XXL with
 weight 0.05, after the cumulative mass has already reached one. It has effectively no
@@ -143,10 +148,10 @@ Linden variants contribute 0.10, producing the 13/20/35/22/10 mixture in the tab
 filtering can alter those proportions, so this is a baseline rather than an exact census.
 
 Retain the mod's normalisation for regeneration. Correcting the two mixtures for the actual
-sprite species is the proposed adjustment; reproducing vanilla's cutoff is unnecessary.
-Keep farmland Linden at 0.15 and normalise the corrected total of 1.05. The unrestricted
-vanilla estimate remains useful as a comparison, not the target for an accidental cutoff.
-Do not edit the vanilla Yellowwood feature as part of this work.
+sprite species was the adjustment made; reproducing vanilla's cutoff is unnecessary.
+Farmland Linden stays at 0.15 and the corrected total of 1.05 is normalised at roll time.
+The unrestricted vanilla estimate remains useful as a comparison, not the target for an
+accidental cutoff. Do not edit the vanilla Yellowwood feature as part of this work.
 
 ### Zones without a single supported estimate
 
@@ -174,7 +179,7 @@ policy rather than inherit one item's filtered distribution.
 
 These findings support retaining the other known biome weights. They do not establish
 density limits: a 100% Pine share says which species the trees are, not how closely they
-stand. No runtime weights have been changed by this audit.
+stand. The two farm mixtures are the only runtime weights this audit changed.
 
 ## Agreed scope
 
