@@ -1,9 +1,9 @@
 # Propagule items for the deciduous species
 
-Design record for items that do not exist yet. **Nothing here is implemented, and none of
-it is in scope for the planting change.** It is written down so the shape of the work is
-known when it is picked up, and so the planting change can be scoped around it rather than
-into it.
+Design record for items that do not exist yet. **Nothing here is implemented.** It was
+written down so the shape of the work is known when it is picked up, and so that
+`add-tree-planting` could be scoped around it rather than into it, which is what happened:
+planting shipped on the sapling, the cone and the berry.
 
 Everything about vanilla behaviour that this leans on is in
 [b42-tree-matrix.md](../reference/b42-tree-matrix.md), chiefly the
@@ -141,9 +141,10 @@ game balance. Holly sits in the multi-year tier on the same grounds as hawthorn 
 
 ## How a drop would be wired
 
-The existing conifer fix is the pattern. `IsoTree.dropWood` is Java and cannot be extended,
-so `EeltsForestryRemastered_ConeDrops.lua` wraps `ISChopTreeAction:animEvent`, reads the
-square and log yield before the tree topples and is pooled, and adds items afterwards.
+The existing drop wrapper is the pattern. `IsoTree.dropWood` is Java and cannot be extended,
+so `EeltsForestryRemastered_TreeDrops.lua` wraps `ISChopTreeAction:animEvent`, reads the
+species, square and log yield before the tree topples and is pooled, and both adds items and
+stamps the ones vanilla added afterwards.
 
 Two constraints carry over unchanged. Species is identified by the sprite tileset prefix,
 since `IsoObject:getName()` is the display name and the tileset is what actually says what

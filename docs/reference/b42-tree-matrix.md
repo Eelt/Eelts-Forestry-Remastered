@@ -203,16 +203,16 @@ guaranteed rather than chance.
 
 Combined with the `i > 2` guard inside the log loop, sapling yield is not monotonic:
 
-| Stage | Logs | `roll` | Saplings | Large branches |
-|---|---|---|---|---|
-| 0 | 1 | 4 | 0 | 0 |
-| 1 | 1 | 4 | 0 | 0 |
-| 2 | 2 | 4 | 1 guaranteed | 0 |
-| 3 | 3 | 3 | 0 | 0 |
-| 4 | 4 | 2 | 0 | 0 |
-| 5 | 5 | 1 | 1 guaranteed | 1 guaranteed |
-| 6 | 6 | 0 | 2 guaranteed | 2 guaranteed |
-| 7 | 8 | -2 | 4 guaranteed | 4 guaranteed |
+| Stage | `numPlanks` | Logs dropped | `roll` | Saplings | Large branches |
+|---|---|---|---|---|---|
+| 0 | 1 | 0 | 4 | 0 | 0 |
+| 1 | 1 | 0 | 4 | 0 | 0 |
+| 2 | 2 | 1 | 4 | 1 guaranteed | 0 |
+| 3 | 3 | 2 | 3 | 0 | 0 |
+| 4 | 4 | 3 | 2 | 0 | 0 |
+| 5 | 5 | 4 | 1 | 1 guaranteed | 1 guaranteed |
+| 6 | 6 | 5 | 0 | 2 guaranteed | 2 guaranteed |
+| 7 | 8 | 7 | -2 | 4 guaranteed | 4 guaranteed |
 
 Stage 2 gets its sapling from the explicit `numPlanks == 2` branch, which drops one
 `Base.Sapling` and one `Base.Log`. Stages 3 and 4 are a dead zone: the log loop runs only
@@ -222,6 +222,22 @@ stage 1 are indistinguishable in drops, since both yield one log and take the
 
 `Base.Splinters` always drops. `Base.TreeBranch2` and `Base.Twigs` each roll once per log
 in a trailing loop, so both are also guaranteed at stages 6 and 7.
+
+**`getLogYield()` is not the number of logs that drop.** `CONFIRMED IN GAME, 2026-09-09`. The
+main log loop runs `numPlanks - 1` times, dropping one `Base.Log` and rolling one species item
+per iteration, while the trailing branch and twig loop runs `numPlanks` times. Two samples:
+
+| Sample | `getLogYield()` | Logs | Species items | Branches, twigs |
+|---|---|---|---|---|
+| Stage 6 Virginia Pine | 6 | 5 | 5 cones | 6, 6 |
+| Stage 4 American Holly | 4 | 3 | 0, wrong season | 2, 2 |
+
+The rule also accounts for the two special branches already documented below: `numPlanks == 1`
+drops no log at all, and `numPlanks == 2` drops exactly one. In both cases that is
+`numPlanks - 1`.
+
+At stage 6 the branch and twig roll is certain, so their 6 against the logs' 5 isolates the
+two loop bounds cleanly. At stage 4 the roll is 1 in 2, and 2 of 4 is what turned up.
 
 ### The species drops sit behind the same gate
 
@@ -469,17 +485,16 @@ germinate, nursery propagation is usually from cuttings, and holly is dioecious 
 female trees bear fruit. That argues for the berry being a slow path with a sapling graft as
 the fast one, rather than the berry being the only route.
 
-Consequences the planting change has to resolve, recorded here rather than decided:
+Three consequences followed, and the `add-tree-planting` change resolved all three.
 
-- Planting a foraged berry means handling a poisoned item, while an identical chopped berry
-  is clean. Either the planting action ignores poison state, or foraged berries need
-  clearing first.
-- The Autumn and Winter gate on chopping means berries are only harvestable from trees for
-  part of the year. Foraging is the year-round fallback, at `months = { 1, 2, 3, 9, 10, 11, 12 }`.
-- Nothing distinguishes a berry meant for eating from one meant for planting, so the UI has
-  to make the choice clear.
-
-See [carried forward to later changes](../future/carried-forward.md).
+- Only a berry carrying no poison can be planted, which means the berry from a chopped Holly
+  and not the one from foraging. The two are otherwise the same item, so the clean one is
+  what makes felling a Holly the way to propagate one.
+- The Autumn and Winter gate on chopping therefore restricts when a plantable berry can be
+  obtained at all. Foraging stays the year-round route to a berry for eating, at
+  `months = { 1, 2, 3, 9, 10, 11, 12 }`, and none of those berries will plant.
+- The planting menu names the species a propagule will grow, so a berry being put in the
+  ground is never confused with one being eaten.
 
 ### Gaps
 
@@ -566,18 +581,74 @@ both of which actually contain Redmaple, American Linden and Yellowwood. The fil
 renamed from oak to maple and the internal names were left behind. There is no oak
 anywhere in B42.20 beyond furniture naming and these two dead identifiers.
 
+`add-tree-planting` left the acorn alone. It is not plantable, and it still grows nothing.
+Binding it to a species as a stand-in was considered and rejected: the reason to reuse it was
+that nothing else existed, and the eight propagule items in
+[propagule-items.md](../future/propagule-items.md) would make it redundant as soon as they
+are built.
+
 ### What this means for propagation
 
 Nine of the eleven species have no propagule item at all. Virginia Pine has its cone and
 American Holly its berry, and this mod treats both as that species' seed. For the remaining
-nine, sapling propagation is the only route, and that is an accepted limitation for the
-first planting release. A sapling graft should stay available for all eleven, since it is
-the only route that works for every species and the only fast one.
+nine, sapling propagation is the only route, which is the accepted limitation `add-tree-planting`
+shipped with. The sapling works for all eleven and is the only fast route, so it stays
+available for every species including the two that have a propagule of their own.
+
+`Base.Sapling` carries no species of its own, so the mod writes one onto it. A propagule that
+drops from a tree the player chopped down records that tree's tileset in its modData, read
+from the standing tree before it topples. Planting a recorded propagule grows that species.
+Planting one with no record, which means a foraged one or one from a save older than the
+change, rolls a species weighted by what the planting square's forage zone grows, restricted
+to what that propagule can become: a cone never grows a broadleaf, and a berry is always
+American Holly.
 
 The sapling supply itself is uneven. Per
 [what chopping a tree yields](#what-chopping-a-tree-yields), a chopped tree gives no
 sapling at all at stages 0, 1, 3 and 4, one at stages 2 and 5, two at stage 6 and four at
 stage 7.
+
+### Where a tree may be planted
+
+`add-tree-planting` allows planting exactly where vanilla allows a furrow to be plowed, by
+calling the same test: `ISShovelGroundCursor.GetDirtGravelSand(square) == "dirt"`, which is
+what `ISFarmingMenu.canDigHereSquare` uses. The mod keeps no ground whitelist of its own.
+
+That function walks every non-item object on the square rather than only the floor, skips
+anything already marked `shovelled` in modData, and classifies what it finds. The `"dirt"`
+result is a prefix test, so grass and forest floor qualify along with bare earth:
+
+```lua
+if luautils.stringStarts(spriteName, "blends_natural_01_") or
+        luautils.stringStarts(spriteName, "floors_exterior_natural") then
+    return "dirt",obj
+end
+```
+
+Four named sprite groups are classified before that test is reached and are therefore **not
+plantable**.
+
+| Result | Sprites | Where it appears |
+|---|---|---|
+| `gravel` | `floors_exterior_natural_01_13`, `blends_street_01_48`, `_53`, `_54`, `_55` | Roads, verges, car parks |
+| `sand` | `blends_natural_01_0`, `_5`, `_6`, `_7`, `floors_exterior_natural_01_24` | Beaches and sand banks |
+| `clay` | `blends_natural_01_96`, `_101`, `_102`, `_103` | Clay shores and lake beds |
+
+These are shoreline and road surface textures rather than soil classifications, so excluding
+them reads in play as being unable to plant on a beach, on a clay bank or on tarmac.
+
+Vanilla worldgen agrees on clay without qualification. `biomes/map/clay_shore.lua` and
+`clay_lake.lua` both set their `TREE` block to `worldgen.subbiomes.no_tree`, so the base game
+places no tree of any species on clay.
+
+Sand is a small simplification rather than a match. `biomes/worldgen/sand_bank.lua` does place
+Virginia Pine and Cockspur Hawthorn, at `p = 0.0025` for a jumbo and `p = 0.0005` for a plain
+or sapling feature. That is two to three orders of magnitude below the 0.1 to 0.4 a forest
+biome uses, and `sand_bank` registers into `worldgen.biomes` rather than `worldgen.biomes_map`,
+so it is not reachable from `BiomeMapConfig.lua` and never runs on the authored map. Refusing
+sand outright therefore contradicts nothing a player can observe, and it matches the real
+habit of the roster: Virginia Pine favours dry acidic sites and will take poor sandy ground,
+but the other ten are forest and forest-edge trees rather than dune or shoreline species.
 
 ### Foraging availability
 

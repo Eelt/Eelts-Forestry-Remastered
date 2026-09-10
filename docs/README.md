@@ -20,8 +20,9 @@ Design for work that is not implemented, and decisions settled ahead of the chan
 will use them. Nothing here describes shipped behaviour, and none of it is a commitment
 to build the thing.
 
-- [carried-forward.md](future/carried-forward.md) holds the decisions taken while the
-  reference documents were written, plus the VHS tape lines that are still unclaimed.
+- [carried-forward.md](future/carried-forward.md) holds what is still unclaimed, chiefly the
+  VHS tape lines no change has taken yet, and points at where the decisions that have since
+  shipped are now described.
 - [propagule-items.md](future/propagule-items.md) is the item by item design for the seed
   items the eight deciduous species would need, with the art each one costs.
 
