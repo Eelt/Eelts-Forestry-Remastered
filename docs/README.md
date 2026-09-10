@@ -25,6 +25,9 @@ to build the thing.
   shipped are now described.
 - [propagule-items.md](future/propagule-items.md) is the item by item design for the seed
   items the eight deciduous species would need, with the art each one costs.
+- [tree-regeneration-and-genetics.md](future/tree-regeneration-and-genetics.md) scopes
+  biome-based natural establishment, inherited autumn timing and seasonal management
+  independent of tree growth.
 
 ## Which folder
 
