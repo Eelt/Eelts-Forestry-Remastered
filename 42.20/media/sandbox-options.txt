@@ -35,3 +35,19 @@ option EeltsForestryRemastered.RequireTreePlantingTape
     page = EeltsForestryRemastered,
     translation = EeltsForestryRemastered_RequireTreePlantingTape,
 }
+
+option EeltsForestryRemastered.CorrectForestComposition
+{
+    type = boolean,
+    default = true,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_CorrectForestComposition,
+}
+
+option EeltsForestryRemastered.StaggerTreeSeasons
+{
+    type = boolean,
+    default = true,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_StaggerTreeSeasons,
+}

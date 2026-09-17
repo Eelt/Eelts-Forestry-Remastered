@@ -54,9 +54,24 @@ end
 
 function Eelt_STreeGrowthSystem:mayGrow(luaObject)
     local mode = self:getMode()
-    if mode == MODE_ALL then return true end
+    if mode == MODE_STOCK then return false end
     if mode == MODE_PLANTED_ONLY then return luaObject.planted == true end
-    return false
+    return mode == MODE_ALL
+end
+
+-- Renaming is what makes vanilla erosion relinquish the square, so it happens here and
+-- nowhere else
+local function adopt(system, square, tree, tileset, stage, planted)
+    local sprites = EeltsForestryRemastered_TreeGrowthSprites
+    if not sprites.getBase(tileset, stage) then return nil end
+    if system:getLuaObjectOnSquare(square) then return nil end
+
+    tree:setName(sprites.ADOPTED_NAME)
+
+    local luaObject = system:newLuaObjectOnSquare(square)
+    luaObject:adoptFrom(tree, tileset, stage, planted)
+    luaObject:stateToIsoObject(tree)
+    return luaObject
 end
 
 function Eelt_STreeGrowthSystem:adoptTree(square, tree)
@@ -66,28 +81,19 @@ function Eelt_STreeGrowthSystem:adoptTree(square, tree)
     local sprite = tree:getSprite()
     local tileset, stage = sprites.identify(sprite and sprite:getName())
     if not tileset or stage >= sprites.MAX_STAGE then return end
-    if self:getLuaObjectOnSquare(square) then return end
 
-    tree:setName(sprites.ADOPTED_NAME)
-
-    local luaObject = self:newLuaObjectOnSquare(square)
-    luaObject:adoptFrom(tree, tileset, stage, false)
-    luaObject:stateToIsoObject(tree)
+    adopt(self, square, tree, tileset, stage, false)
 end
 
 -- Planting adopts on the spot; adoptNearPlayers only runs under the all trees setting,
 -- which is the one setting a planted tree does not need
 function Eelt_STreeGrowthSystem:adoptPlantedTree(square, tree, tileset)
-    local sprites = EeltsForestryRemastered_TreeGrowthSprites
-    if not sprites.getBase(tileset, 0) then return nil end
-    if self:getLuaObjectOnSquare(square) then return nil end
+    return adopt(self, square, tree, tileset, 0, true)
+end
 
-    tree:setName(sprites.ADOPTED_NAME)
-
-    local luaObject = self:newLuaObjectOnSquare(square)
-    luaObject:adoptFrom(tree, tileset, 0, true)
-    luaObject:stateToIsoObject(tree)
-    return luaObject
+-- Correction owns the square whatever size the tree is, so this one carries no stage ceiling
+function Eelt_STreeGrowthSystem:adoptCorrectedTree(square, tree, tileset, stage)
+    return adopt(self, square, tree, tileset, stage, false)
 end
 
 -- SGlobalObjectSystem:OnChunkLoaded only fires for chunks this system already owns,
@@ -119,27 +125,28 @@ end
 
 function Eelt_STreeGrowthSystem:updateAdoptedTrees()
     local hoursPerStage = self:getHoursPerStage()
+    local season, progress, staggered = Eelt_STreeGrowthObject.currentSeason()
     for i = 1, self.system:getObjectCount() do
         local luaObject = self.system:getObjectByIndex(i - 1):getModData()
         if self:mayGrow(luaObject) and luaObject:isReadyToGrow(hoursPerStage) then
             luaObject:grow()
         else
-            luaObject:refreshOverlay()
+            luaObject:refreshOverlay(season, progress, staggered)
         end
     end
 end
 
 -- Season changes are driven by the hourly tick; the debug menu calls this to force one
 function Eelt_STreeGrowthSystem:refreshAllOverlays()
+    local season, progress, staggered = Eelt_STreeGrowthObject.currentSeason()
     for i = 1, self.system:getObjectCount() do
-        self.system:getObjectByIndex(i - 1):getModData():refreshOverlay()
+        self.system:getObjectByIndex(i - 1):getModData():refreshOverlay(season, progress, staggered)
     end
 end
 
 function Eelt_STreeGrowthSystem.everyHour()
     local instance = Eelt_STreeGrowthSystem.instance
     if not instance then return end
-    if instance:getMode() == MODE_STOCK then return end
     instance:updateAdoptedTrees()
     instance:adoptNearPlayers()
 end

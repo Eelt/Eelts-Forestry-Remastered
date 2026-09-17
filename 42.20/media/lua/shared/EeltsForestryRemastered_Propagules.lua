@@ -86,7 +86,7 @@ function propagules.stamp(item, tileset)
 end
 
 -- Read the zone directly; forageSystem.getForageZoneAt registers a forage zone as a side effect
-local function zoneSpeciesAt(x, y)
+function propagules.zoneWeightsAt(x, y)
     local zones = getZones(x, y, 0)
     for i = 0, zones and zones:size() - 1 or -1 do
         local byZone = propagules.zoneSpecies[zones:get(i):getType()]
@@ -95,25 +95,30 @@ local function zoneSpeciesAt(x, y)
     return nil
 end
 
-function propagules.rollSpecies(fullType, x, y)
-    local eligible = propagules.eligible[fullType]
-    if not eligible or #eligible == 0 then return nil end
-    if #eligible == 1 then return eligible[1] end
+-- A nil eligible list means every species the weights name, which is what a bare square asks
+-- for. Returns nil when nothing weighted is eligible, leaving the fallback to the caller
+function propagules.rollFromWeights(weights, eligible)
+    if not weights then return nil end
 
-    local byZone = zoneSpeciesAt(x, y)
     local candidates, total = {}, 0
-    if byZone then
+    if eligible then
         for _, tileset in ipairs(eligible) do
-            local weight = byZone[tileset]
+            local weight = weights[tileset]
             if weight and weight > 0 then
+                total = total + weight
+                candidates[#candidates + 1] = { tileset = tileset, weight = weight }
+            end
+        end
+    else
+        for tileset, weight in pairs(weights) do
+            if weight > 0 then
                 total = total + weight
                 candidates[#candidates + 1] = { tileset = tileset, weight = weight }
             end
         end
     end
 
-    -- Nothing local the propagule can become, so any of them will do
-    if total <= 0 then return eligible[ZombRand(#eligible) + 1] end
+    if total <= 0 then return nil end
 
     local roll = ZombRand(math.floor(total * 1000)) / 1000
     for _, candidate in ipairs(candidates) do
@@ -121,6 +126,18 @@ function propagules.rollSpecies(fullType, x, y)
         if roll < 0 then return candidate.tileset end
     end
     return candidates[#candidates].tileset
+end
+
+function propagules.rollSpecies(fullType, x, y)
+    local eligible = propagules.eligible[fullType]
+    if not eligible or #eligible == 0 then return nil end
+    if #eligible == 1 then return eligible[1] end
+
+    local rolled = propagules.rollFromWeights(propagules.zoneWeightsAt(x, y), eligible)
+    if rolled then return rolled end
+
+    -- Nothing local the propagule can become, so any of them will do
+    return eligible[ZombRand(#eligible) + 1]
 end
 
 function propagules.speciesFor(item, x, y)

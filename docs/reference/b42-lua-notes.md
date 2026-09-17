@@ -152,6 +152,24 @@ Enum options need `numValues` and a **1-based** `default`.
 version directory. B41's `Sandbox_EN.txt` form is gone. Some workshop mods still ship the old
 files alongside new ones, which makes the wrong pattern easy to copy.
 
+## The debug console cannot see a mod's globals
+
+`UIDebugConsole.ProcessCommand` evaluates in its own lua state, reported in stack traces as
+`Lua(Vanilla).console`. A global a mod defined is not there, so
+`YourMod_Something.field = true` fails with `attempted index of non-table` at
+`KahluaThread.tableSet`, and reading one fails with `attempted index: <field> of non-table`.
+The command is soft, it prints a stack trace and the game carries on.
+
+This is not the same as client and server files being separated. In single player a client
+file reads a global defined in a server file perfectly well, which is how
+`EeltsForestryRemastered_TreeDebugMenu.lua` reaches `Eelt_STreeGrowthSystem`. Only the
+console is walled off.
+
+**What to do:** put anything you need to toggle or read at runtime behind a context menu
+entry in a client file, not behind a console command. A mod also needs to print its own
+evidence, since the game logs nothing when a lua file loads and a silent mod is
+indistinguishable from one that never loaded.
+
 ## A tree is not in `worldobjects`
 
 In `OnFillWorldObjectContextMenu`, the clicked square's tree is **not** in the `worldobjects`
@@ -189,6 +207,27 @@ procedural generation through `WorldGenChunk`, and erosion respawns through
 
 The corollary is useful: an object a **player** places does fire the event, so player-created
 things can be tracked for free.
+
+## The four seasons and their lengths
+
+Stepped a day at a time through a full year on 2026-09-12, reading
+`ErosionMain.getInstance():getSeasons()` after nudging it with `setDay` each day. The default
+configuration gives four seasons of very unequal length:
+
+| Season | Starts | Days | Ends |
+|---|---|---|---|
+| Spring | 9 February | 65 | 14 April |
+| Early Summer | 15 April | 142 | 2 September |
+| Autumn | 3 September | 64 | 5 November |
+| Winter | 6 November | 95 | 8 February |
+
+So "Early Summer" covers what a player would call spring, summer and the end of August, and is
+more than twice the length of autumn. Spring is over before the middle of April. Anything
+tuned per season needs that in front of it: an equal fraction of each season is not an equal
+number of days, and two months of real spring sit inside the Early Summer season.
+
+`getSeasonDay()` is zero based and `getSeasonDays()` is the season's length, so progress is
+`getSeasonDay() / getSeasonDays()` and reaches but never quite equals one.
 
 ## `EveryTenMinutes` and `EveryHours` are in-game time
 

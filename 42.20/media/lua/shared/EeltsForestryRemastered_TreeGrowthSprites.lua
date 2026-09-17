@@ -53,10 +53,12 @@ local function baseSpriteFor(tileset, stage)
     return spriteFor(tileset, stage, 0)
 end
 
--- Winter and late autumn carry no overlay, which is why a bare base is correct for them
+-- Winter and late autumn carry no overlay, which is why a bare base is correct for them.
+-- Late Summer is the tint vanilla shows from early July, far too early for Kentucky
 local SEASON_POSITION = {
     ["Spring"] = 2,
     ["Early Summer"] = 3,
+    ["Late Summer"] = 4,
     ["Autumn"] = 5,
 }
 

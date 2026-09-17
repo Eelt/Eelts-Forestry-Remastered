@@ -1,6 +1,7 @@
 if isClient() then return end
 
 require "Map/SGlobalObject"
+require "EeltsForestryRemastered_TreeSeasons"
 
 Eelt_STreeGrowthObject = SGlobalObject:derive("Eelt_STreeGrowthObject")
 
@@ -53,43 +54,29 @@ function Eelt_STreeGrowthObject:stateToIsoObject(isoObject)
     if square then square:RecalcAllWithNeighbours(true) end
 end
 
--- Erosion staggers the turn with a per square magic number; this is the stable equivalent.
--- Operands stay well inside 32 bits because the game's lua overflows % past Integer.MAX_VALUE
-local function staggerFor(x, y)
-    return ((((x or 0) % 1000) * 73 + (((y or 0) % 1000) * 179)) % 997) / 997
+function Eelt_STreeGrowthObject.currentSeason()
+    return EeltsForestryRemastered_TreeSeasons.current()
 end
 
-local function seasonProgress()
-    local ok, progress = pcall(function()
-        local seasons = ErosionMain.getInstance():getSeasons()
-        local days = seasons:getSeasonDays()
-        if days <= 0 then return 1.0 end
-        return seasons:getSeasonDay() / days
-    end)
-    if ok and progress then return progress end
-    return 1.0
-end
-
--- Deliberately skips vanilla's split summer, which tints trees from early July
-function Eelt_STreeGrowthObject:displaySeason()
-    local season = getClimateManager():getSeasonName()
-    if season == "Spring" or season == "Early Summer" then return season end
-    if season ~= "Autumn" then return nil end
-
-    local stagger = staggerFor(self.x, self.y)
-    local progress = seasonProgress()
-    if progress < stagger * 0.35 then return "Early Summer" end
-    if progress >= 0.75 + stagger * 0.2 then return nil end
-    return "Autumn"
+function Eelt_STreeGrowthObject:displaySeason(season, progress, staggered)
+    return EeltsForestryRemastered_TreeSeasons.lookFor(self.x, self.y, season, progress, staggered)
 end
 
 function Eelt_STreeGrowthObject:debugSeason()
-    local stagger = staggerFor(self.x, self.y)
-    local progress = seasonProgress()
-    return string.format("x=%s y=%s stagger=%.4f progress=%.4f turnAt=%.4f fallAt=%.4f season=%s result=%s",
-        tostring(self.x), tostring(self.y), stagger, progress,
-        stagger * 0.35, 0.75 + stagger * 0.2,
-        tostring(getClimateManager():getSeasonName()), tostring(self:displaySeason()))
+    local treeSeasons = EeltsForestryRemastered_TreeSeasons
+    local stagger = treeSeasons.staggerFor(self.x, self.y)
+    local progress = treeSeasons.progress()
+    local season = getClimateManager():getSeasonName()
+    local position = treeSeasons.yearPosition(season, progress)
+    local leafOut, summer, first, deep, down = treeSeasons.boundariesFor(stagger)
+
+    return string.format("x=%s y=%s stagger=%.4f season=%s progress=%.4f position=%s result=%s vanilla=%s",
+        tostring(self.x), tostring(self.y), stagger, tostring(season), progress,
+        position and string.format("%.4f", position) or "nil",
+        tostring(self:displaySeason(season, progress, true)),
+        tostring(self:displaySeason(season, progress, false)))
+        .. string.format(" | leafOut=%.4f summer=%.4f firstColour=%.4f deepColour=%.4f leavesDown=%.4f staggered=%s",
+        leafOut, summer, first, deep, down, tostring(treeSeasons.staggerEnabled()))
 end
 
 function Eelt_STreeGrowthObject:applyOverlay(isoObject)
@@ -97,7 +84,7 @@ function Eelt_STreeGrowthObject:applyOverlay(isoObject)
     local attached = isoObject:getAttachedAnimSprite()
     if attached then attached:clear() end
 
-    local spriteName = self.tileset and sprites.getOverlay(self.tileset, self.stage, self:displaySeason())
+    local spriteName = self.tileset and sprites.getOverlay(self.tileset, self.stage, self.overlaySeason)
     if not spriteName then return end
 
     local sprite = getSprite(spriteName)
@@ -113,13 +100,16 @@ function Eelt_STreeGrowthObject:applyOverlay(isoObject)
     attached:add(sprite:newInstance())
 end
 
-function Eelt_STreeGrowthObject:refreshOverlay()
-    local season = self:displaySeason()
-    if season == self.overlaySeason then return end
-    self.overlaySeason = season
+-- Recording the season before the tree is reachable would leave it stale for good, and
+-- correction owns trees far outside any loaded chunk
+function Eelt_STreeGrowthObject:refreshOverlay(season, progress, staggered)
+    local display = self:displaySeason(season, progress, staggered)
+    if display == self.overlaySeason then return end
 
     local isoObject = self:getIsoObject()
     if not isoObject then return end
+
+    self.overlaySeason = display
     self:applyOverlay(isoObject)
     if isServer() then isoObject:transmitUpdatedSpriteToClients() end
 end

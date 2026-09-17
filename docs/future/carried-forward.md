@@ -25,8 +25,8 @@ document.
 
 ## Settled elsewhere
 
-Three things that used to be carried forward here have shipped, and are now described in the
-reference documents rather than planned in this one.
+Five things that used to be carried forward here have shipped, and are described in the
+reference documents and the accepted specs rather than planned in this one.
 
 - **Tree growth**, in `add-tree-growth`. A tree grows on its own elapsed time through all
   eight stages, controlled by `EeltsForestryRemastered.TreeGrowth` and
@@ -38,6 +38,19 @@ reference documents rather than planned in this one.
   `EeltsForestryRemastered.FixConiferConeDrops`. Trees felled by a vehicle or by fire remain
   uncorrected, because they do not route through the chopping action.
 
+- **The erosion boundary layer**, in `add-erosion-boundary-layer`. Vanilla cannot be stopped
+  from choosing a wild tree's species, but it chooses once per square and renaming the tree
+  takes that square off erosion for good, so the mod overwrites the choice on `LoadGridsquare`
+  and owns the square from then on. Controlled by
+  `EeltsForestryRemastered.CorrectForestComposition`. The behaviour is described in
+  `openspec/specs/forest-composition/`.
+
+- **The foliage year**, in `retune-foliage-seasons`. A tree the mod owns runs bare, spring
+  foliage, summer green, an early fall look and a deep fall look, timed for Kentucky rather than
+  for the season boundary nearest to hand, with each tree changing a little before or after its
+  neighbours. `EeltsForestryRemastered.StaggerTreeSeasons` switches between that and the base
+  game's own timing. Described in `openspec/specs/tree-seasons/`.
+
 - **Planting**, in `add-tree-planting`. Saplings, pine cones and holly berries plant, gated on
   a digging tool and on having watched the tape. Species inheritance, the forage zone
   fallback, the holly berry's poison state and the acorn's fate are all recorded in
@@ -47,9 +60,67 @@ reference documents rather than planned in this one.
 
 ## Shipped but unverified
 
-Three things in `add-tree-planting` work by construction and by single player testing, and
-have never been observed doing their job. They are listed here rather than left in an archived
-task list so that a later change knows to check them.
+Things that work by construction, or in single player, and have never been observed doing
+their job. They are listed here rather than left in an archived task list so that a later
+change knows to check them.
+
+### From `add-erosion-boundary-layer`
+
+Species correction itself is verified. Three surveys on 2026-09-12 found no tree that was the
+wrong species for its own square, Acidic Forest returned 443 Virginia Pine on 443 PHForest
+squares, the same survey point returned identical counts either side of a save and reload, and
+650000 squares produced no error. What follows is what nobody has watched.
+
+- **The bin under a long game.** Correction takes a tree for every square a player walks past,
+  and the growth system iterates all of them hourly. The count reached 10247 in a few hours of
+  play and grows with exploration. Nobody has timed the hourly tick against a large bin, and
+  the ceiling is unknown. This is the scaling risk the change was designed around and it is
+  still open.
+- **A dedicated server.** The pass is entirely server side and has only ever run in single
+  player. Whether `LoadGridsquare` fires on a dedicated server at all is an assumption, as is
+  whether corrected sprites reach clients and whether two players loading the same ground
+  correct each square once rather than twice.
+- **The other erosion categories.** Correction is supposed to touch trees and nothing else.
+  Grass, groundcover, ferns, bushes, street and wall erosion have not been checked in a
+  corrected area, and street and wall erosion should still run normally there.
+- **Erosion speed and erosion days.** Correction has not been run against a raised erosion
+  speed, a positive erosion days setting, a negative one, or a world with erosion switched off.
+- **Recovery from a lost bin.** The settle record is the global object bin and the fast path is
+  the tree's name. A reload keeps the pair intact, which is proven, but nobody has deleted the
+  bin to confirm a corrected forest recovers rather than rerolling into fresh species.
+- **The unplaced claim.** Erosion can claim a square and place its tree months later, and a
+  square with no object has nothing to rename. The pass cannot see the claim. Needs a fresh
+  world and months of elapsed time to observe.
+- **Chopping an unadopted erosion tree.** Whether erosion clears its category data rather than
+  regrowing the tree is read from bytecode only.
+
+### From `retune-foliage-seasons`
+
+The mod's own foliage year is verified end to end. All five looks were watched in order across a
+full simulated year: bare through mid March, spring foliage from 26 March, summer green from 30
+April, the early fall look on 8 October, the deep look on 15 to 29 October, bare on 5 November.
+Evergreens never change, nothing drifted species or size across eleven repeatedly inspected
+squares, and a save played without the mod took the new foliage as soon as the mod was added.
+
+- **How faithfully the unstaggered rule copies vanilla.** With the stagger setting switched off
+  the mod is supposed to show what an unmodded tree shows. It reproduces the defect, a Dogwood
+  wore the tint on 4 July, but the date may be up to two weeks early. The rule splits summer at
+  its midpoint, which on the measured 142 day season falls between 17 June and 2 July depending
+  on the square, while `b42-tree-matrix.md` quotes about 2 July from an assumed 100 day summer
+  running 13 May to 21 August. Settling it needs a mod-owned tree compared against a genuinely
+  unadopted one of the same species, on the same day, with time running rather than jumping.
+- **An unadopted Redmaple showed deep autumn colour on 15 October**, where the unstaggered rule
+  says vanilla should already be bare. The likely explanation is that erosion only refreshes its
+  own objects on its internal timer, so a debug date jump leaves them showing a stale sprite, but
+  that is a guess. The same side-by-side test would settle it, and it is the reason that test has
+  to let time run rather than jump.
+
+Both only affect the non-default path. With the setting on, which is the default, the timing is
+the mod's own and is confirmed.
+
+### From `add-tree-planting`
+
+Three things work by construction and by single player testing.
 
 - **The tape appearing in loot.** `EeltsForestryRemastered_Distributions.lua` adds a
   `Base.VHS_Home` on `OnFillContainer` at 1 in 260 across five room types and five container

@@ -1,8 +1,16 @@
 # Tree management and genetics
 
-Future scope for taking trees off vanilla erosion, managing them independently of growth,
-and giving them a genetic identity that survives grafting and reseeding. Apart from the two
-corrected farm species weights, none of the changes described here is implemented.
+Future scope for managing trees independently of growth and giving them a genetic identity
+that survives grafting and reseeding.
+
+The erosion boundary layer described below has since shipped, in `add-erosion-boundary-layer`,
+along with the seasonal correction that had to come with it and the species policy split that
+both planting and regeneration now share. What it does is described in
+`openspec/specs/forest-composition/` and the parts of `openspec/specs/tree-growth/` that cover
+seasons; what nobody has watched it do is in [carried-forward.md](carried-forward.md). The
+boundary layer section is kept here because the reasoning behind it still governs the work that
+follows. Genetics, inherited autumn timing, stage distribution and the remaining seasonal
+controls are not implemented.
 
 The erosion question this work was originally blocked on is answered. Lua cannot disable or
 replace `NatureTrees`, but it does not need to: erosion decides a square once and renaming a
@@ -24,9 +32,9 @@ Paths in this section are relative to `42.20/media/lua/`.
 | Source | Current behaviour | Consequence |
 |---|---|---|
 | `server/EeltsForestryRemastered_TreeGrowthSystem.lua`, `adoptTree` | Identifies an existing tree, preserves its species and stage, and skips stage 7 | Adoption cannot correct which species erosion establishes. A wild tree first encountered at maximum size never receives the mod's seasonal handling |
-| Same file, `mayAdoptWildTrees` and `everyHour` | Wild discovery requires all-trees growth; stock mode exits before either growth or overlay updates | Seasonal correction is coupled to growth settings |
+| Same file, `mayAdoptWildTrees` and `everyHour` | Wild discovery requires all-trees growth | Since `add-erosion-boundary-layer` the hourly tick no longer exits early under stock growth, so seasonal correction is independent of the growth setting |
 | Same file, `adoptNearPlayers` | Scans a radius of 30 squares around each player hourly | Overlapping scans are harmless for existing adoption checks, but cannot become independent establishment rolls without multiplying spawn opportunities |
-| `server/EeltsForestryRemastered_TreeGrowthObject.lua`, `displaySeason` | Computes a stable stagger from coordinates and maps it into autumn progress | Timing belongs to the location, so a graft planted elsewhere does not inherit its parent's timing |
+| `shared/EeltsForestryRemastered_TreeSeasons.lua`, `staggerFor` | Computes a stable stagger from coordinates and shifts all five foliage boundaries by it | Timing belongs to the location, so a graft planted elsewhere does not inherit its parent's timing |
 | `shared/EeltsForestryRemastered_Propagules.lua` | Stores `Eelt_Species` on items and selects unmarked items' species using `zoneSpecies` | Species weights can be shared with regeneration, but no genetic trait is stored or transferred |
 | `server/EeltsForestryRemastered_TreeDrops.lua` | Captures species before chopping destroys and pools the tree, then stamps new drops | Genetics must be captured at the same point, including from trees not previously managed |
 | `server/EeltsForestryRemastered_TreePlanting.lua`, `plantTree` | Creates stage 0 and calls `adoptPlantedTree` | Natural establishment needs a creation path that leaves `planted` false |
@@ -34,16 +42,22 @@ Paths in this section are relative to `42.20/media/lua/`.
 Trees adopted before reaching stage 7 remain managed afterward. The seasonal defect affects
 trees skipped at discovery, rather than every tree that reaches maximum size.
 
-The current seasonal calculation uses one coordinate-derived value `s` in the range
-`0 <= s < 1`. During autumn it keeps summer foliage until progress reaches `s * 0.35`,
-then keeps autumn foliage until `0.75 + s * 0.2`. Spring and early summer bypass this split.
-The intended windows are therefore the first 0 to 35 percent of autumn for colouring and
-75 to 95 percent for leaf fall. The existing discrete calculation stops just short of the
-upper endpoints.
+The seasonal calculation was replaced in `retune-foliage-seasons` and the description that
+used to sit here, of two autumn-only thresholds at `s * 0.35` and `0.75 + s * 0.2`, no longer
+describes anything. The rule now covers the whole year.
 
-These are fractions of the game's autumn, deliberately preserving green summer foliage
-instead of vanilla's July tint. They are not fixed month-and-day dates, and the genetics
-work must retain that distinction.
+One coordinate-derived value in the range `0 <= s < 1` still drives it, from
+`EeltsForestryRemastered_TreeSeasons.staggerFor`. What it shifts is five boundaries expressed
+as positions in a year, where a position is the season's own slot plus how far through it the
+date has got, so slot 2.27 is 27 percent into autumn. The five are leaf out, summer green,
+first colour, deep colour and leaves down, and the same value moves all of them together by
+`(s - 0.5) * 0.16`, because a tree that leafs out early also turns early.
+
+Two things the genetics work must retain. The boundaries are fractions of a season, never
+fixed month-and-day dates, so a world with different season lengths stretches the cycle with
+it. And one normalised value per tree drives the whole year, which is exactly the shape an
+inherited trait needs; replacing `staggerFor` with a stored trait is the whole of the change,
+and no window has to move.
 
 ## Vanilla evidence
 
@@ -290,19 +304,34 @@ must be defined without rerolling on every attempted planting.
 
 ## Integration work for a proposal
 
+The boundary layer, the seasonal decoupling and the species policy split have shipped. What
+follows is what is left.
+
 Erosion ownership is settled and no longer blocks a proposal. Renaming is the mechanism,
 the mod already does it, and no vanilla file is edited or shadowed.
 
-The boundary layer is the first piece of work, because everything else waits on it.
-Subscribe to `LoadGridsquare`, decide cheaply whether a square has already been settled, and
-do nothing at all in the common case. Establish that cost before building policy on top of
-it, and record which squares are settled since the event gives no once per square guarantee
-of its own.
+The boundary layer was the first piece of work and is done. It subscribes to
+`LoadGridsquare`, tests for a tree and then for the mod's own name on it before anything
+else, and measured 0.15 microseconds a square over 600000 squares, so neither a zone weight
+cache nor a deferred queue was needed. The settle record is the growth system's own object
+bin rather than new storage.
 
 Tree management then needs separate decisions for identity, seasonal display and size
 progression. Removing the stage-7 adoption guard alone does not remove the stock-mode
-early return or planted-only discovery restriction. Seasonal-only ownership must also
-preserve the selected growth behaviour rather than accidentally suppress stock growth.
+early return or planted-only discovery restriction.
+
+Ownership is authoritative. A square the boundary layer has taken belongs to the mod, and
+vanilla's own growth of that tree ends rather than being carried on in its place. Under stock
+growth an owned tree therefore holds the size it had when it was taken, which is the same
+behaviour [succession](vegetation-succession.md) already specifies for an established tree:
+it starts at stage 0 and uses the mod's elapsed time grower subject to the selected growth
+mode, with vanilla contributing nothing. This was originally written the other way round, as
+a requirement to preserve stock growth, before it was clear that doing so is impossible:
+vanilla's ceiling for an erosion tree is
+`maxStage = 2 + floor((eValue - 50) / 17) - 1`, which depends on `noiseMainInt` on
+`ErosionData$Square`, and that class is not exposed to lua. Approximating the ceiling with a
+single value was rejected, since it would hand some squares more growth than vanilla and
+others less, unpredictably, to imitate the system the boundary layer exists to replace.
 
 Move the biome species policy out of item-specific selection so planting and
 [succession](vegetation-succession.md) share it. The current `rollSpecies` fallback chooses

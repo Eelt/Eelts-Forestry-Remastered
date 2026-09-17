@@ -81,16 +81,27 @@ take less time, proportionally.
 
 ### Requirement: Only undersized trees are taken over
 
-The mod SHALL adopt a tree only when the area around it is loaded, and only when that tree
-is below the ceiling in effect. A tree already at or above the ceiling SHALL be left alone.
+The proximity scan that finds wild trees SHALL adopt a tree only when the area around it is
+loaded, and only when that tree is below the ceiling in effect. A tree already at or above the
+ceiling SHALL be left alone by that scan, because there is no size left for it to grow into.
+
+Composition correction is not bound by this. A tree it corrects SHALL be taken over at any
+size stage, including the largest, since correction hands the mod responsibility for that
+tree's seasons whatever size it is.
 
 Adoption SHALL be based on the tree's current stage, so a tree already part-grown continues
 from where it is rather than restarting.
 
 #### Scenario: A full-size tree is ignored
 
-- **WHEN** the area around a tree already at the largest size is loaded
+- **WHEN** the area around a tree already at the largest size is loaded, and composition
+  correction is turned off
 - **THEN** that tree is not adopted and never changes
+
+#### Scenario: A full-size tree is taken over by correction
+
+- **WHEN** composition correction settles a square carrying a tree already at the largest size
+- **THEN** that tree is taken over, its seasons are maintained, and it does not grow
 
 #### Scenario: A part-grown tree continues from its current stage
 
@@ -165,11 +176,27 @@ Every tree the setting allows to grow SHALL be able to reach the largest size. T
 chooses which trees grow, not how large they may become, and there SHALL be no separate
 control over the size a tree may reach.
 
+The setting governs growth alone. It SHALL NOT control whether wild species are corrected to
+suit their surroundings, and it SHALL NOT control whether the mod maintains a tree's seasonal
+appearance.
+
+A square the mod has corrected SHALL be owned by the mod outright. The base game's own growth
+of that tree SHALL end and SHALL NOT be emulated, because correction exists to replace that
+system rather than to imitate it. Under the base game's growth choice a corrected tree
+therefore stays the size it was corrected at. This SHALL be stated in the correction
+setting's own description, so a player choosing that combination knows their wild trees will
+not change size at all.
+
 #### Scenario: Set to the base game's behaviour
 
-- **WHEN** the setting is the base game's behaviour
-- **THEN** no tree is adopted, nothing grows beyond what the base game does on its own, and
-  the world behaves exactly as it would without the mod
+- **WHEN** the setting is the base game's behaviour and composition correction is off
+- **THEN** no tree grows beyond what the base game does on its own
+
+#### Scenario: A corrected tree under the base game's behaviour
+
+- **WHEN** the setting is the base game's behaviour and a tree is corrected
+- **THEN** that tree stops changing size altogether, because the mod owns its square and the
+  base game's growth of it has ended rather than being carried on by the mod
 
 #### Scenario: Set to all trees
 
@@ -180,10 +207,17 @@ control over the size a tree may reach.
 
 - **WHEN** the setting is player-planted only
 - **THEN** trees the player has planted grow and may in time reach the largest size, and no
-  wild tree is adopted or grows however long a player spends near it
+  wild tree grows however long a player spends near it
 
 #### Scenario: Set to the base game's behaviour after planting a tree
 
 - **WHEN** the setting is the base game's behaviour and a player plants a tree
 - **THEN** that tree stays at the size it was planted at, because this setting stops all
   growth regardless of how a tree came to exist
+
+#### Scenario: An unmodded world needs both settings off
+
+- **WHEN** a player wants the world to behave as it would without the mod
+- **THEN** the growth setting must be the base game's behaviour and composition correction
+  must be turned off, because the growth setting alone no longer stops the mod changing
+  anything

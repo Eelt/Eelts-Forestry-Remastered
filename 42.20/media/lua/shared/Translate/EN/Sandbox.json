@@ -13,6 +13,12 @@
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier": "Tree growth time",
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long a tree takes to grow, as a multiplier. At 1.0 a tree goes from a fresh sapling to the largest size in roughly three in-game months. Higher values take longer, lower values are faster.",
 
+    "Sandbox_EeltsForestryRemastered_CorrectForestComposition": "Correct forest composition",
+    "Sandbox_EeltsForestryRemastered_CorrectForestComposition_tooltip": "Wild trees become species the surrounding area actually grows. The base game picks a species from soil noise and never looks at the biome, so a pine forest fills up with maples. Correcting a tree takes its square away from the base game for good: it will keep its new species, this mod maintains its seasons from then on, and under the base game tree growth setting it will no longer change size at all. Turning this off stops further correction and does not undo what is already corrected.",
+
+    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons": "Stagger autumn colour",
+    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons_tooltip": "Times foliage for Kentucky. Trees come into leaf in spring, stay green through summer and into September, take their first colour around the middle of September, are at their deepest through the second half of October, and are bare before winter, with each tree changing a little before or after its neighbours. Uncheck to show trees the way the base game does instead, which colours them from around the start of July and leaves them bare from the middle of autumn. Either way this mod drives the foliage of every tree it has taken over, because such a tree is off the base game's seasons permanently.",
+
     "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape": "Require 'Tree Planting Guide' for planting",
     "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape_tooltip": "If checked, you must watch the \"Home VHS: Tree Planting Guide\" tape before you can plant trees."
 }
