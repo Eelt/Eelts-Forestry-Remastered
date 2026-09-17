@@ -153,8 +153,8 @@ the only line now claimed:
 
 > Step firmly on the earth around the base of the tree when you fill the soil back in.
 
-The remaining lines describe mechanics that are not in scope. Each is a candidate for later
-work.
+The remaining lines describe mechanics that are not in scope. The candidates they imply are
+listed after the table.
 
 | Line | Text | Mechanic implied |
 |---|---|---|
@@ -170,3 +170,25 @@ work.
 | 16, 17 | "... and remember to plant the right trees in the right place. Use the local species as a guide to what thrives and what doesn't." | Species suited to the forage zone, which planting now uses for unmarked propagules only |
 | 18 | "Mark your trees if they're not visible from a distance..." | Marker or stake object |
 | 19, 20 | "... and protect them from rabbits, deer or livestock... with adequate piping or fencing." | Animal damage and fencing |
+
+### Candidate additions
+
+Low priority, and none of it thought through. This is a list of things the tape describes that
+the mod does not do, kept so the ideas are not lost, not a plan and not a commitment. Anything
+here would need scoping from scratch before it meant anything.
+
+- Pot tiers, and transplanting a tree up through them as it grows.
+- Bare root stock plantable only in winter, potted stock plantable at any time.
+- Soil moisture, and roots rotting in ground that is too wet.
+- Clearing grass and plants off a square before a tree will take.
+- A digging step, with the hole sized against the rootball rather than fixed.
+- Planting depth, matching the depth the tree grew at before.
+- Air pockets left in the backfill reducing a tree's chance of surviving.
+- Minimum spacing between trees, scaled by the size the species reaches.
+- A proximity restriction near buildings and power lines.
+- A marker or stake object for a tree too small to see from a distance.
+- Animal damage from rabbits, deer and livestock, and fencing or piping against it.
+
+Half of one line is already done. Lines 16 and 17, on planting the right species for the place,
+are what `zoneSpecies` covers, but only for a propagule carrying no species of its own; nothing
+stops a player planting a marked propagule somewhere its species would never grow.
