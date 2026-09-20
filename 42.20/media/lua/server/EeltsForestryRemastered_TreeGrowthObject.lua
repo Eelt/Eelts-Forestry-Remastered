@@ -121,6 +121,27 @@ function Eelt_STreeGrowthObject:isReadyToGrow(hoursPerStage)
     return getGameTime():getWorldAgeHours() - entered >= hoursPerStage
 end
 
+-- Advances every stage the elapsed time has paid for, keeping the part of the next one already
+-- earned, so a tree returned to repeatedly ends up level with one that was never unloaded
+function Eelt_STreeGrowthObject:catchUp(hoursPerStage)
+    local sprites = EeltsForestryRemastered_TreeGrowthSprites
+    if not self.tileset or self.stage >= sprites.MAX_STAGE then return 0 end
+    if not hoursPerStage or hoursPerStage <= 0 then return 0 end
+
+    local entered = self.enteredHour or getGameTime():getWorldAgeHours()
+    local due = math.floor((getGameTime():getWorldAgeHours() - entered) / hoursPerStage)
+    if due < 1 then return 0 end
+
+    local gained = math.min(due, sprites.MAX_STAGE - self.stage)
+    self.stage = self.stage + gained
+    self.enteredHour = entered + due * hoursPerStage
+
+    local isoObject = self:getIsoObject()
+    if isoObject then self:stateToIsoObject(isoObject) end
+    self:updateOnClient()
+    return gained
+end
+
 function Eelt_STreeGrowthObject:grow()
     self.stage = math.min(self.stage + 1, EeltsForestryRemastered_TreeGrowthSprites.MAX_STAGE)
     self.enteredHour = getGameTime():getWorldAgeHours()

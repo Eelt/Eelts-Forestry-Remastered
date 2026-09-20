@@ -1,7 +1,21 @@
 # Vegetation succession
 
-Future scope for vegetation recovering over time on ground that has been cleared, burned or
-felled, up to a density ceiling that varies by biome. None of it is implemented.
+Scope for vegetation recovering over time on ground that has been cleared, burned or felled, up
+to a density ceiling that varies by biome.
+
+Most of this shipped in `add-vegetation-succession`. Cleared ground now recovers through grass,
+tall grass and ferns, bushes and trees on elapsed world time, from a clearing record written on
+the square when the mod sees it felled, scythed or dug out; species come from the same
+`zoneSpecies` weights planting and correction use, biased by the trees already standing; and
+the crowding ceiling is keyed on the worldgen biome. What it does is described in
+`openspec/specs/vegetation-succession/`, and what nobody has watched it do is in
+[carried-forward.md](carried-forward.md).
+
+What did not ship, and is still scoped here rather than built: genetics and inherited timing on
+the chosen parent, seed dispersal and ancestry, and the trunk census follow up that would
+confirm the realisation factor outside Acidic Forest. The density ordering itself is no longer
+open; it was measured across the whole map and is in
+[b42-tree-matrix.md](../reference/b42-tree-matrix.md#the-map-census).
 
 This is the largest piece of the forestry work and it stands alone. Tree identity, seasonal
 management and inherited timing are in
@@ -62,9 +76,10 @@ the case to check first.
 
 ### Crowding ceilings
 
-Density rises until it reaches a biome specific limit. Deep Forest should end substantially
-denser than plain Forest, with Primary Forest and Organic Forest somewhere between. The
-English translations confirm those names map to `DeepForest`, `Forest`, `PRForest` and
+Density rises until it reaches a biome specific limit. The ordering between zones is now
+measured rather than assumed, and it is in the census section of
+[b42-tree-matrix.md](../reference/b42-tree-matrix.md#the-map-census). The English
+translations confirm those names map to `DeepForest`, `Forest`, `PRForest` and
 `OrganicForest`, and that `primary_forest.lua` supplies Deep Forest despite its name.
 
 A small minimum spacing plus a wider neighbourhood density limit is a proposed way to
@@ -72,56 +87,46 @@ express the ceiling. Exact radii, counts and boundary treatment are open. Trees 
 seed parents should still count as physical crowding. This scope adds limits to natural
 recovery; it does not change player planting spacing and does not thin existing forests.
 
-#### The density ordering is not evidence based yet
+#### The density ordering is measured
 
-The ordering above is a gameplay preference. The English label for `DeepForest` is Deep
-Forest, not Dense Forest, and the four names alone do not establish trees per area.
+The whole map was read from the shipped files on 2026-09-16 and the result is recorded in
+[the map census](../reference/b42-tree-matrix.md#the-map-census). It counts tree slots in the
+authored placement per forage zone, across all 266403840 squares, and it replaces the
+guesswork this section used to carry.
 
-The installed `media/lua/shared/Foraging/forageZones.lua` defines these values:
+Deep Forest is densest at 223.3 slots per thousand squares, which the earlier guess got
+right. The rest of the guess was wrong. Organic Forest is near the top at 184.8 rather than
+in the middle, Primary Forest sits mid table at 100.1 alongside Acidic Forest at 95.3, and
+Birch Mixed Forest is the sparsest real forest at 75.9 despite Birch Forest being second
+densest at 192.9. Ceilings follow that table.
 
-| Forage zone | Item density minimum and maximum | Daily refill percent |
-|---|---|---|
-| Primary Forest, `PRForest` | 6 to 8 | 5 |
-| Organic Forest, `OrganicForest` | 8 to 10 | 5 |
-| Forest, `Forest` | 8 to 10 | 7 |
-| Deep Forest, `DeepForest` | 8 to 10 | 7 |
+Plain `Forest` is not a forest and should not be given a forest ceiling. It is 204315
+squares, 0.077 percent of the map, mapping to `clay_shore` and `clay_lake`, both of which
+define no `TREE`, `BUSH` or `PLANT` features and use the `no_tree` subbiome. It carries 2.1
+tree slots per thousand.
 
-These are forage item parameters. `forageSystem.fillZone` scales the density draw by zone
-area and writes `itemsLeft` and `itemsTotal`; `checkRefillZone` restores that budget. They
-do not place trees or measure canopy cover. Organic Forest shares the same base range as
-Forest and Deep Forest, and Primary Forest is lower. Neither result supplies a crowding
-limit.
+Deep Forest's procedural branch does not exist on this map. `BiomeMapConfig.lua` maps pixel
+96 to `$random`, and pixel 96 occurs on zero squares, so the authored branch describes all of
+Deep Forest and the four way comparison this section once said was impossible is available.
 
-The authored map tree features give a different comparison, among tree selections before
-placement failures:
+Two qualifications remain. The census counts the slots the map authors placed, before
+`WorldGenTile.getBiomeTile` rejects the ones whose footprint will not fit, so realised trunks
+are fewer; one in-game survey of Acidic Forest puts that at about 71 percent. And the slots
+are painted in slabs, with 58.5 percent of Deep Forest tree squares having all eight
+neighbours also carrying a tree, so the census supports a density ceiling and supports no
+minimum spacing at all. Any spacing number is mod tuning.
 
-| Biome | Jumbo, stages 4 and 5 | XL, stage 6 | XXL, stage 7 |
-|---|---|---|---|
-| Primary Forest | 50% | 33.3% | 16.7% |
-| Organic Forest | 30% | 30% | 40% |
-| Deep Forest, authored branch | 0% | 52.6% | 47.4% |
-| Plain Forest | No single tree mixture identified | No single tree mixture identified | No single tree mixture identified |
+Two earlier comparisons are kept because they are still true and still not density evidence.
+`forageZones.lua` gives Primary Forest an item density of 6 to 8 and Organic, plain and Deep
+Forest 8 to 10, but those are forage item budgets scaled by zone area and place no trees. And
+the authored feature mixtures differ in vegetation structure, Primary Forest favouring
+smaller mature stages with Redbud, Hawthorn and Silverbell, Organic Forest carrying Dogwood,
+Redmaple and Linden with a larger XXL share, and authored Deep Forest holding only XL and XXL
+variants of mainly Hemlock and Holly. Larger tree art changes how dense a forest looks without
+changing trunks per area.
 
-Primary Forest favours smaller stages within the mature range and contains Redbud, Hawthorn
-and Silverbell. Organic Forest contains Dogwood, Redmaple and Linden with a larger XXL
-share. Authored Deep Forest contains only XL and XXL variants, mainly Hemlock and Holly. The
-tree subbiome specifies bushes for Primary Forest, grass for Organic Forest and bushes for
-authored Deep Forest. Those are differences in vegetation structure, not a numeric density
-ordering. Primary and Organic Forest share `FOREST` landscape, `MEDIUM` temperature and
-`DRY`/`RAIN` hygrometry, so nothing there justifies treating Organic Forest as denser
-either.
-
-Initial map tree positions, feature footprints, placement restrictions and subbiome
-replacement all affect the resulting number of trunks, and larger tree art changes how dense
-a forest looks without proving more trunks per area. Deep Forest's procedural branch and
-plain Forest's missing single mixture prevent an exact four way comparison from the
-definitions alone.
-
-Before claiming vanilla derived crowding limits, count trunks in multiple equal area samples
-within the four forage zones on a fresh map. Record canopy cover separately, avoid mixed
-zone boundaries, and distinguish authored from procedural Deep Forest. Until that
-measurement exists, leave the placement of Primary and Organic Forest open and label any
-assigned limits as mod tuning.
+A trunk count in game is still worth doing, as a check on the realisation factor in zones
+other than Acidic Forest. It is no longer what the ceilings are waiting on.
 
 ## Tree establishment
 
@@ -184,8 +189,8 @@ not remove existing trees.
   cross a stage boundary.
 - Recovery rates, stage durations and the density curve. All tuning, none of it derived from
   vanilla.
-- Crowding numbers, which need the trunk census above before they can be called anything but
-  mod tuning.
+- Crowding numbers. The ordering comes from the census; the absolute values and the spacing
+  are mod tuning, and the realisation factor is measured in one zone only.
 - Interaction with the erosion stacking case in
   [tree-management-and-genetics.md](tree-management-and-genetics.md), since establishment
   puts trees on squares erosion may still be holding an unplaced claim on.
@@ -198,8 +203,8 @@ not remove existing trees.
   elapsed time recovery rather than loaded time recovery.
 - Compare recovered composition against the biome pools, including PHForest, and confirm no
   square carries a species its local pool does not support.
-- Check the ceiling in all four forage zones and confirm the ordering matches whatever the
-  trunk census established.
+- Check the ceiling in all four forage zones and confirm the ordering matches the census
+  table.
 - Exercise all three planted parent settings. Confirm natural descendants count as wild and
   that existing trees survive a settings change.
 - Watch a clear cut boundary that runs through the middle of a chunk.

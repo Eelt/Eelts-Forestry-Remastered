@@ -13,11 +13,34 @@
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier": "Tree growth time",
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long a tree takes to grow, as a multiplier. At 1.0 a tree goes from a fresh sapling to the largest size in roughly three in-game months. Higher values take longer, lower values are faster.",
 
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming": "Tree growth timing",
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_tooltip": "When a tree is brought up to date. Catching up on arrival means a tree you return to after a long absence is already the size that time earned it.",
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_Values_option1": "Catch up when you arrive",
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_Values_option2": "Only while the area is loaded",
+
     "Sandbox_EeltsForestryRemastered_CorrectForestComposition": "Correct forest composition",
     "Sandbox_EeltsForestryRemastered_CorrectForestComposition_tooltip": "Wild trees become species the surrounding area actually grows. The base game picks a species from soil noise and never looks at the biome, so a pine forest fills up with maples. Correcting a tree takes its square away from the base game for good: it will keep its new species, this mod maintains its seasons from then on, and under the base game tree growth setting it will no longer change size at all. Turning this off stops further correction and does not undo what is already corrected.",
 
     "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons": "Stagger autumn colour",
     "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons_tooltip": "Times foliage for Kentucky. Trees come into leaf in spring, stay green through summer and into September, take their first colour around the middle of September, are at their deepest through the second half of October, and are bare before winter, with each tree changing a little before or after its neighbours. Uncheck to show trees the way the base game does instead, which colours them from around the start of July and leaves them bare from the middle of autumn. Either way this mod drives the foliage of every tree it has taken over, because such a tree is off the base game's seasons permanently.",
+
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession": "Vegetation grows back",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_tooltip": "Cleared ground recovers over time: grass, then ferns and bushes, then trees. The base game puts nothing back. Limiting it to ground you cleared leaves old fields alone and costs less performance.",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option1": "Off, nothing grows back",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option2": "Only ground you cleared",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option3": "All open ground, including old fields",
+
+    "Sandbox_EeltsForestryRemastered_RecoveryTimeMultiplier": "Regrowth time",
+    "Sandbox_EeltsForestryRemastered_RecoveryTimeMultiplier_tooltip": "How long regrowth takes. At 1.0 grass returns within days and the first saplings about a month after clearing. Higher is slower.",
+
+    "Sandbox_EeltsForestryRemastered_RecoveryDensityMultiplier": "Regrowth density",
+    "Sandbox_EeltsForestryRemastered_RecoveryDensityMultiplier_tooltip": "How thickly trees grow back. At 1.0 an area reaches about the density its own biome carries. Set to 0 for grass and bushes but no trees. Never thins an existing wood.",
+
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents": "Trees you planted as parents",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_tooltip": "Whether trees you planted influence what grows back near them. Trees that seed themselves count as wild whatever this is set to.",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option1": "No influence",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option2": "Only where the species already grows",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option3": "Any species, anywhere",
 
     "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape": "Require 'Tree Planting Guide' for planting",
     "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape_tooltip": "If checked, you must watch the \"Home VHS: Tree Planting Guide\" tape before you can plant trees."

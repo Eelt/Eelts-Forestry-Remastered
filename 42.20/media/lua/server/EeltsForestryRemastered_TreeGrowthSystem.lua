@@ -11,6 +11,13 @@ local MODE_ALL = 3
 
 local GROWTH_OPTION = "EeltsForestryRemastered.TreeGrowth"
 local TIME_OPTION = "EeltsForestryRemastered.TreeGrowthTimeMultiplier"
+local TIMING_OPTION = "EeltsForestryRemastered.TreeGrowthTiming"
+
+local TIMING_ON_ARRIVAL = 1
+
+-- What the arrival catch-up has cost so far, for the debug menu. Chunk loads come in bursts,
+-- so the worst single chunk matters more than the average
+local chunks, caughtUp, grown, totalMs, worstMs = 0, 0, 0, 0, 0
 
 -- Seven transitions at thirteen in game days each is roughly three months from stage 0 to 7
 local BASE_HOURS_PER_STAGE = 312
@@ -96,6 +103,64 @@ function Eelt_STreeGrowthSystem:adoptCorrectedTree(square, tree, tileset, stage)
     return adopt(self, square, tree, tileset, stage, false)
 end
 
+-- Natural establishment has no item and no planter, so it builds the tree itself and then
+-- takes it exactly as planting does, minus the planted flag
+function Eelt_STreeGrowthSystem:adoptEstablishedTree(square, tileset)
+    local sprites = EeltsForestryRemastered_TreeGrowthSprites
+    local spriteName = sprites.getBase(tileset, 0)
+    local sprite = spriteName and getSprite(spriteName)
+    if not sprite then return nil end
+
+    local tree = IsoTree.new(square, sprite)
+    square:AddTileObject(tree)
+    if isServer() then tree:transmitCompleteItemToClients() end
+    triggerEvent("OnObjectAdded", tree)
+
+    local luaObject = adopt(self, square, tree, tileset, 0, false)
+    square:RecalcAllWithNeighbours(true)
+    return luaObject
+end
+
+function Eelt_STreeGrowthSystem:catchesUpOnArrival()
+    local option = getSandboxOptions():getOptionByName(TIMING_OPTION)
+    local value = option and option:getValue()
+    return (value or TIMING_ON_ARRIVAL) == TIMING_ON_ARRIVAL
+end
+
+-- Useless for discovery, since it reports only what this system already owns, which is exactly
+-- the set that needs bringing up to date. The base body recycles its own list, so take another
+function Eelt_STreeGrowthSystem:OnChunkLoaded(wx, wy)
+    SGlobalObjectSystem.OnChunkLoaded(self, wx, wy)
+    if not self:catchesUpOnArrival() then return end
+
+    local started = getTimestampMs()
+    local hoursPerStage = self:getHoursPerStage()
+    local season, progress, staggered = Eelt_STreeGrowthObject.currentSeason()
+    local globalObjects = self.system:getObjectsInChunk(wx, wy)
+    local trees = globalObjects:size()
+    for i = 1, trees do
+        local luaObject = globalObjects:get(i - 1):getModData()
+        if luaObject then
+            if self:mayGrow(luaObject) and luaObject:catchUp(hoursPerStage) > 0 then
+                grown = grown + 1
+            end
+            luaObject:refreshOverlay(season, progress, staggered)
+        end
+    end
+    self.system:finishedWithList(globalObjects)
+
+    local elapsed = getTimestampMs() - started
+    chunks = chunks + 1
+    caughtUp = caughtUp + trees
+    totalMs = totalMs + elapsed
+    if elapsed > worstMs then worstMs = elapsed end
+end
+
+function Eelt_STreeGrowthSystem.arrivalReport()
+    print(string.format("Eelt's Forestry Remastered: arrival catch-up: %d chunks, %d trees looked at, %d grown, %d ms total, worst chunk %d ms",
+        chunks, caughtUp, grown, totalMs, worstMs))
+end
+
 -- SGlobalObjectSystem:OnChunkLoaded only fires for chunks this system already owns,
 -- and no lua event sees a tree being placed, so adoption rides the hourly tick
 function Eelt_STreeGrowthSystem:adoptNearPlayers()
@@ -149,6 +214,10 @@ function Eelt_STreeGrowthSystem.everyHour()
     if not instance then return end
     instance:updateAdoptedTrees()
     instance:adoptNearPlayers()
+
+    -- Chunk load catches a square arriving; this catches one a player is already standing on
+    local succession = EeltsForestryRemastered_Succession
+    if succession then succession.sweepNearPlayers() end
 end
 
 SGlobalObjectSystem.RegisterSystemClass(Eelt_STreeGrowthSystem)

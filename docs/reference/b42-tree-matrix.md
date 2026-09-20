@@ -393,6 +393,102 @@ Trees already on the map take a different path. `replaceExistingObject` converts
 `vegetation_trees` sprite to `3 + floor(eValue / 51) - 1`, and adopts an existing `e_*`
 tree at stage 3, JUMBO at 4 or 5, JUMBOXL at 6 and JUMBOXXL at 7.
 
+## The map census
+
+The shipped map can be read without running the game, and the whole of it was, on
+2026-09-16. This is the trunk census `docs/future/vegetation-succession.md` asked for before
+any crowding limit could be called anything but a preference.
+
+### Method
+
+`media/maps/Muldraugh, KY/` holds 4065 authored cells. Each has a `*.lotheader`, which is a
+`LOTH` magic, a version, a count and then that many newline separated tile names, and a
+`world_*.lotpack`, which is a `LOTP` magic, a version, a chunk count and then that many
+64-bit chunk offsets. A chunk is 8 by 8 squares and a cell holds 1024 of them, so a cell is
+256 by 256. Each square in a chunk is an int count, then that many ints of which the first is
+the room id and the rest are indices into the header's name table, or a count of -1 followed
+by a run length to skip.
+
+Alongside them, `maps/biomemap_*.png` is a 256 by 256 8-bit palette image, one per cell,
+whose palette grey value is the pixel `BiomeMapConfig.lua` maps to a biome and a forage zone.
+Palette index is not the pixel value; the grey has to be read through the `PLTE` chunk.
+
+A square counts as carrying a tree when one of its tiles has the `tree` property in the
+shipped `*.tiles.txt` definitions, which is the same property the size stages use, or is a
+`jumbo_tree` sprite. Bushes are `f_bushes` and `vegetation_foliage`.
+
+The census read all 266403840 squares. Orientation was checked by transposing the zone
+lookup, which put trees on open water and in town centres, so the row major reading is right.
+
+### Slots are not trunks
+
+What the map holds is the placement the map authors made, in legacy `vegetation_trees_01` and
+`jumbo_tree_01` sprites. `WorldGenChunk.replaceSquare` swaps each for a feature of the mapped
+biome and `WorldGenTile.getBiomeTile` retries smaller sizes and can fail, so the realised
+trunk count is at or below the slot count.
+
+An in-game survey of Acidic Forest on 2026-09-12 found 443 trees over an 81 by 81 area, which
+is 67.5 per thousand against the 95.3 slots per thousand below, so about 71 percent of slots
+become a trunk. That ratio is one measurement in one zone.
+
+### Slots by forage zone
+
+| Forage zone | Squares | Tree slots per 1000 | Bush slots per 1000 |
+|---|---|---|---|
+| Deep Forest | 130297120 | 223.3 | 1.1 |
+| Birch Forest | 6756859 | 192.9 | 11.2 |
+| Organic Forest | 36386549 | 184.8 | 14.3 |
+| Farmland Forest | 2843412 | 129.8 | 10.8 |
+| Primary Forest | 12261678 | 100.1 | 9.7 |
+| Acidic Forest | 24669016 | 95.3 | 3.8 |
+| Managed Forestry | 4841333 | 88.7 | 17.2 |
+| Birch Mixed Forest | 10284131 | 75.9 | 10.5 |
+| Farm | 80030 | 33.7 | 10.6 |
+| Trailer Park | 86622 | 10.2 | 8.2 |
+| Town | 7084652 | 6.2 | 5.4 |
+| ForagingNav, dirt | 7918144 | 3.8 | 1.4 |
+| Forest | 204315 | 2.1 | 4.0 |
+| Farmland | 12904431 | 0.9 | 0.3 |
+| Water | 9785548 | 0.4 | 0.2 |
+
+Grass is absent from the template entirely. It is placed at runtime by erosion's
+`NatureGeneric`, which writes `e_newgrass_1_*`, so a forest floor's cover is not in these
+files and cannot be counted from them.
+
+### What the census settles
+
+The density ordering is measured, and it is not the one that was guessed. Deep Forest is
+densest, as expected, but Organic Forest is near the top rather than in the middle, Primary
+Forest sits mid table alongside Acidic Forest, and Birch Mixed Forest is the sparsest real
+forest despite Birch Forest being second densest.
+
+Plain `Forest` is lake and clay shore, not forest. It is 0.077 percent of the map, it carries
+2.1 tree slots per thousand, and both `clay_shore` and `clay_lake` define no `TREE`, `BUSH` or
+`PLANT` features at all and use the `no_tree` subbiome. Their ground replacement is
+`features.GROUND.clay`, whose four sprites are the ones
+`ISShovelGroundCursor.GetDirtGravelSand` reports as clay rather than dirt.
+
+Deep Forest has no procedural branch on this map. `BiomeMapConfig.lua` maps pixel 96 to
+`$random` and pixel 255 to `primary_forest`, and pixel 96 occurs on zero squares. Every Deep
+Forest square is the authored branch, so the composition audit's percentages describe all of
+it.
+
+The authored forage zones in `objects.lua` are dead. `metazoneHandler.doMapZones` skips every
+object whose type is `Vegitation`, `DeepForest`, `Forest`, `TownZone`, `Farm`, `FarmLand` or
+`TrailerPark`, so the 1666 authored `Forest` rectangles covering 11255093 squares never
+register as zones. Every forage zone the game has comes from the biome map. Together with the
+two commented-out rows, that means `Vegitation` and `PHMixForest` exist by neither route.
+
+### Slots are clumped, so there is no spacing evidence
+
+Trees are not scattered. In Deep Forest 58.5 percent of tree squares have all eight
+neighbours also carrying a tree, and the mean count within three squares is 33.4 of a possible
+48. Acidic Forest is 41.9 percent and 28.7, Organic Forest 19.2 percent and 19.5.
+
+The authors painted slabs, and the spacing a player sees comes from worldgen refusing
+footprints inside those slabs. So the census supports a density ceiling and does not support a
+minimum spacing between trunks.
+
 ## Propagation items and the gaps
 
 Four items are candidates for a propagule. All are defined in

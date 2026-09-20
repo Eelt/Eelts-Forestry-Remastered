@@ -51,3 +51,53 @@ option EeltsForestryRemastered.StaggerTreeSeasons
     page = EeltsForestryRemastered,
     translation = EeltsForestryRemastered_StaggerTreeSeasons,
 }
+
+option EeltsForestryRemastered.VegetationSuccession
+{
+    type = enum,
+    numValues = 3,
+    default = 3,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_VegetationSuccession,
+    valueTranslation = EeltsForestryRemastered_VegetationSuccession_Values,
+}
+
+option EeltsForestryRemastered.RecoveryTimeMultiplier
+{
+    type = double,
+    default = 1.0,
+    min = 0.1,
+    max = 20.0,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_RecoveryTimeMultiplier,
+}
+
+option EeltsForestryRemastered.RecoveryDensityMultiplier
+{
+    type = double,
+    default = 1.0,
+    min = 0.0,
+    max = 5.0,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_RecoveryDensityMultiplier,
+}
+
+option EeltsForestryRemastered.PlantedTreeParents
+{
+    type = enum,
+    numValues = 3,
+    default = 1,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_PlantedTreeParents,
+    valueTranslation = EeltsForestryRemastered_PlantedTreeParents_Values,
+}
+
+option EeltsForestryRemastered.TreeGrowthTiming
+{
+    type = enum,
+    numValues = 2,
+    default = 1,
+    page = EeltsForestryRemastered,
+    translation = EeltsForestryRemastered_TreeGrowthTiming,
+    valueTranslation = EeltsForestryRemastered_TreeGrowthTiming_Values,
+}

@@ -38,7 +38,11 @@ rules:
     - Include a "Non-goals" section.
   tasks:
     - Each task must name the file it changes under 42.20/media/lua/.
-    - Include an in-game verification step, there is no automated test suite.
+    - Keep building and checking apart. An implementation task is done when the code is
+      written, and says how to tell it was written rather than how it behaves in play.
+    - Verification happens in game, since there is no test suite, so put it in its own
+      numbered group of tasks that name what to do and what to look for. That way the task
+      list distinguishes what is unwritten from what is written but unwatched.
 
 operations:
   apply:

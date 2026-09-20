@@ -118,6 +118,87 @@ squares, and a save played without the mod took the new foliage as soon as the m
 Both only affect the non-default path. With the setting on, which is the default, the timing is
 the mod's own and is confirmed.
 
+### From `retime-tree-growth`
+
+The catch-up itself is verified. A planted holly left unloaded for 106 days came back at stage
+7 rather than climbing there, held at the ceiling with fifteen days of surplus, and did not
+move again over the following in-game hour. The remainder is proven kept: two 30 day catch-ups
+land on stage 4 with 192.1 hours into the next, where a single 60 day catch-up lands, and five
+7 day catch-ups land on stage 2 with 216.2, where a single 35 day catch-up lands. Discarding it
+would have given 0.0 and 168.0. The older timing still advances a tree on the hourly tick, and
+an area left in August and returned to in late October showed October's foliage.
+
+- **What it costs on a dense chunk.** The pass counts chunks, trees looked at, trees grown,
+  total milliseconds and the worst single chunk, readable from the debug menu, and nobody has
+  driven through owned forest to read it. A chunk load arrives in a burst, so the worst chunk
+  is what a stall would come from. This is the one open number.
+- **Ordinary growth, unchanged.** A tree that is never unloaded should grow exactly as it did
+  before, at default pace and at a doubled one. The hourly tick was not touched, so this is a
+  regression check rather than a new behaviour, and it has not been run.
+- **The growth setting still gating.** `mayGrow` is called before `catchUp`, so player planted
+  only should catch up no wild tree and the base game's choice should catch up nothing at all.
+  Read from the code, not watched.
+- **The three kinds of tree.** A planted tree, a corrected wild tree and a naturally
+  established one are the same object type in the same bin and `catchUp` cannot tell them
+  apart, so they catch up alike by construction. Confirming it needs a world holding all three.
+- **A dedicated server.** Whether the catch-up reaches clients, and whether a late joining
+  client sees trees at their caught up size, is assumed. The same gap as every feature before
+  it.
+
+### From `add-vegetation-succession`
+
+Recovery itself is verified. A fresh world clear cut in early May carried grass, tall grass and
+ferns, bushes and 1579 fresh saplings by 30 June, 57871 understory objects were placed across
+500000 squares, all 44 ladder sprites resolve at startup, and a save and reload of a recovered
+area left it unchanged with nothing doubled. Felling and scything both stamp the square they
+clear. What follows is what nobody has watched.
+
+- **What it costs on a mature world.** The pass measured 1.05 microseconds a square on a young
+  world and 18.2 on one where every square had aged into a rung, because a quarter of a million
+  squares that nobody had cleared were each paying for an object walk on every chunk load. The
+  string matching behind that walk has since been replaced with a memoised lookup and the
+  figure has not been taken again. This is the one open number that could still sink the
+  feature, and 18.2 is about 900 squares to a frame.
+- **The object bin under a long game.** Inherited from `add-erosion-boundary-layer` and never
+  closed. The hourly tick walks every tree the mod owns, succession adds every established tree
+  to the same bin, and nobody has timed the walk against a large one. `retime-tree-growth`
+  narrows what the walk has to do but does not shrink the bin.
+- **A dedicated server.** Entirely server side and only ever run in single player, as with both
+  earlier features. Whether placements and established trees reach clients, and whether two
+  players loading the same ground place each square once rather than twice, is assumed.
+- **Every setting except the default.** Succession has run only on its default choice. Off,
+  ground you cleared only, the regrowth time and density multipliers, and all three planted
+  parent choices are unexercised. So is turning succession off partway through a world, which
+  is supposed to leave what has already grown where it is.
+- **Ownership holding over time.** A renamed grass or bush square should be off vanilla erosion
+  for good, the way a renamed tree is, but nobody has watched one for several in-game weeks to
+  see whether erosion puts its own object back. Nor has a recovered square been cleared a second
+  time to confirm the record resets, or a cleared area saved and reloaded before anything was
+  visible to confirm the record survives on its own.
+- **The timing against vanilla's own.** The tree rung is set to open on day 30 and reach every
+  square by about day 90, which is where vanilla places its first and last wild trees. The
+  observed run started in May and was read in June, so the window itself has not been checked
+  end to end.
+- **Elapsed time against loaded time.** Two equal areas, one watched and one left unloaded for
+  the same stretch, should end at the same rung. Not tried.
+- **The ceilings in the ground.** Recovery is supposed to stop at a density taken from the map
+  census and to leave a stand denser than its ceiling alone. Neither the stopping nor the
+  ordering between zones has been measured in game, and the saturation curve the limits are
+  read from comes from a simulation rather than from play.
+- **Plain `Forest`.** It is 0.077 percent of the map, it is clay shore and clay lake, and it is
+  given the Organic Forest species mixture with a near zero ceiling. No shoreline has been
+  visited to confirm it grows back understory and almost no trees.
+- **The edges.** A clear cut boundary running through the middle of a chunk, which is the case
+  the per square clearing record was chosen for. Raised erosion speed, positive and negative
+  erosion days, and erosion switched off. Street, wall and flowerbed erosion still running
+  normally inside a recovering area. None checked.
+- **Planting beside recovery.** The ceiling is supposed to limit recovery only, never to refuse
+  a player planting closer than it allows. Not tried.
+- **Animal grazing as a clearing.** Felling, scything and digging a plot out all stamp the
+  square. Grazing runs through `AnimalData` in java where lua cannot wrap it, so a grazed square
+  falls back to the world clock and regrows its tufts sooner than it should. Its ground is
+  restored by vanilla either way.
+
 ### From `add-tree-planting`
 
 Three things work by construction and by single player testing.

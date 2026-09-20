@@ -1,6 +1,7 @@
 require "TimedActions/ISChopTreeAction"
 require "EeltsForestryRemastered_Propagules"
 require "EeltsForestryRemastered_TreeGrowthSprites"
+require "EeltsForestryRemastered_Understory"
 
 local HEMLOCK_TILESET = "e_canadianhemlock_1"
 local CONE_DROP_OPTION = "EeltsForestryRemastered.FixConiferConeDrops"
@@ -72,6 +73,10 @@ function ISChopTreeAction:animEvent(event, parameter)
     ISChopTreeAction_animEvent(self, event, parameter)
 
     if not (tree and square and before and tree:getObjectIndex() == -1) then return end
+
+    -- Felling is the one clearing the mod sees for certain, and it restarts recovery whether
+    -- or not the tree was one the mod owned
+    EeltsForestryRemastered_Understory.markCleared(square)
 
     if tileset then stampNewDrops(square, before, tileset) end
 

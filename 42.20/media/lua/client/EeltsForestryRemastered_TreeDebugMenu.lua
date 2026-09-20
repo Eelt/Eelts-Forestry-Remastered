@@ -1,4 +1,5 @@
 require "EeltsForestryRemastered_Planting"
+require "EeltsForestryRemastered_Understory"
 
 local PREFIX = "Eelt's Forestry Remastered: "
 
@@ -62,8 +63,17 @@ local function adoptOrGrow(tree)
 end
 
 -- Month is 0 based, matching the erosion demo debug controls
+-- World age runs off nightsSurvived, not off the calendar, so moving one without the other
+-- leaves seasons and anything time since clearing disagreeing
+local function skipNights(gameTime, nights)
+    gameTime:setNightsSurvived(gameTime:getNightsSurvived() + nights)
+    local succession = EeltsForestryRemastered_Succession
+    if succession then succession.refresh() end
+end
+
 local function skipMonth(tree)
     local gameTime = GameTime.getInstance()
+    skipNights(gameTime, gameTime:daysInMonth(gameTime:getYear(), gameTime:getMonth()))
     gameTime:setMonth(gameTime:getMonth() + 1)
     if gameTime:getMonth() >= 12 then
         gameTime:setMonth(0)
@@ -327,6 +337,67 @@ local function toggleBoundaryLog()
     print(PREFIX .. "correction logging " .. (boundary.verbose and "on" or "off"))
 end
 
+local function successionReport()
+    local succession = EeltsForestryRemastered_Succession
+    if not succession then
+        print(PREFIX .. "succession not loaded")
+        return
+    end
+    succession.report()
+end
+
+local function toggleSuccessionTiming()
+    local succession = EeltsForestryRemastered_Succession
+    if not succession then
+        print(PREFIX .. "succession not loaded")
+        return
+    end
+    succession.timing = not succession.timing
+    print(PREFIX .. "succession timing " .. (succession.timing and "on" or "off"))
+    if succession.timing then succession.calibrate() end
+end
+
+local function describeRecovery(_, square)
+    local succession = EeltsForestryRemastered_Succession
+    if not succession then
+        print(PREFIX .. "succession not loaded")
+        return
+    end
+    succession.describe(square)
+end
+
+local function clearSquare(_, square)
+    EeltsForestryRemastered_Understory.markCleared(square)
+    print(PREFIX .. "marked cleared at " .. tostring(EeltsForestryRemastered_Understory.clearedAt(square)))
+end
+
+local function forceEstablish(_, square)
+    local succession = EeltsForestryRemastered_Succession
+    if succession then succession.forceEstablish(square) end
+end
+
+local function forceRung(_, square, rung)
+    local succession = EeltsForestryRemastered_Succession
+    if succession then succession.forceRung(square, rung) end
+end
+
+-- The first run may still grow something; the rest are the steady state cost of the walk
+local function tickCost()
+    local system = Eelt_STreeGrowthSystem and Eelt_STreeGrowthSystem.instance
+    if not system then
+        print(PREFIX .. "growth system not loaded")
+        return
+    end
+
+    local count = system.system:getObjectCount()
+    local started = getTimestampMs()
+    for _ = 1, 10 do system:updateAdoptedTrees() end
+    local elapsed = getTimestampMs() - started
+
+    print(string.format("%shourly tick over %d objects: %d ms for ten runs, %.2f ms a run",
+        PREFIX, count, elapsed, elapsed / 10.0))
+end
+
 -- ErosionMain only recomputes the season on its own timer, so every date jump nudges it
 local function advanceOneDay(gameTime)
     local day = gameTime:getDay() + 1
@@ -341,6 +412,7 @@ local function advanceOneDay(gameTime)
         gameTime:setMonth(month)
     end
     gameTime:setDay(day)
+    skipNights(gameTime, 1)
 
     pcall(function()
         ErosionMain.getInstance():getSeasons():setDay(gameTime:getDay(), gameTime:getMonth(), gameTime:getYear())
@@ -425,6 +497,62 @@ local function showFoliage(tree, seasonName)
         tostring(sprites.getOverlay(luaObject.tileset, luaObject.stage, seasonName) or "bare")))
 end
 
+local function arrivalReport()
+    if not Eelt_STreeGrowthSystem then
+        print(PREFIX .. "growth system not loaded")
+        return
+    end
+    Eelt_STreeGrowthSystem.arrivalReport()
+end
+
+local function ownedObject(tree)
+    local system = Eelt_STreeGrowthSystem and Eelt_STreeGrowthSystem.instance
+    local square = tree:getSquare()
+    local luaObject = system and square and system:getLuaObjectOnSquare(square)
+    if not luaObject then print(PREFIX .. "the mod does not own this tree") end
+    return system, luaObject
+end
+
+-- Exercises the arrival catch-up without travelling: wind the tree's clock back and let it
+-- work out what it missed. Printing the remainder is the point, since that is what a tree
+-- caught up repeatedly would otherwise lose against one that was never unloaded
+local function backdateTree(tree, days)
+    local system, luaObject = ownedObject(tree)
+    if not luaObject then return end
+
+    local sprites = EeltsForestryRemastered_TreeGrowthSprites
+    if luaObject.stage >= sprites.MAX_STAGE then
+        print(string.format("%salready at the largest stage, so nothing can be gained. Reset it to a sapling first",
+            PREFIX))
+        return
+    end
+
+    local hoursPerStage = system:getHoursPerStage()
+    local now = getGameTime():getWorldAgeHours()
+    luaObject.enteredHour = (luaObject.enteredHour or now) - days * 24
+
+    local wasStage = luaObject.stage
+    local gained = luaObject:catchUp(hoursPerStage)
+
+    print(string.format("%sbackdated %d days at %.1f hours a stage: stage %d to %d, gained %d, %.1f hours into the next",
+        PREFIX, days, hoursPerStage, wasStage, luaObject.stage, gained,
+        now - (luaObject.enteredHour or now)))
+end
+
+-- Backdating a tree that is already full size proves nothing, so this puts one back to a
+-- sapling with its clock set to now
+local function resetTree(tree)
+    local system, luaObject = ownedObject(tree)
+    if not luaObject then return end
+
+    luaObject.stage = 0
+    luaObject.enteredHour = getGameTime():getWorldAgeHours()
+    luaObject:stateToIsoObject(tree)
+    luaObject:updateOnClient()
+
+    print(string.format("%sreset to stage 0 with its clock set to now", PREFIX))
+end
+
 local function addTreeOptions(context, tree)
     local option = context:addOption("Eelt's Forestry Remastered Debuggers", tree, nil)
     local submenu = ISContextMenu:getNew(context)
@@ -435,6 +563,15 @@ local function addTreeOptions(context, tree)
     submenu:addOption("Skip one month", tree, skipMonth)
     submenu:addOption("Skip one week", tree, skipWeek)
     submenu:addOption("Force a growth tick", tree, forceTick)
+
+    submenu:addOption("Reset to a sapling", tree, resetTree)
+
+    local backdateOption = submenu:addOption("Backdate and catch up", nil, nil)
+    local backdateMenu = ISContextMenu:getNew(submenu)
+    submenu:addSubMenu(backdateOption, backdateMenu)
+    for _, days in ipairs({ 5, 7, 13, 30, 60, 91, 365 }) do
+        backdateMenu:addOption(days .. " days", tree, backdateTree, days)
+    end
 
     local foliageOption = submenu:addOption("Show a foliage look", nil, nil)
     local foliageMenu = ISContextMenu:getNew(submenu)
@@ -457,6 +594,21 @@ local function addPlantingOptions(context, worldobjects, playerObj, square)
     submenu:addOption("Log a season year", nil, logSeasonYear)
     submenu:addOption("Boundary totals", nil, boundaryReport)
     submenu:addOption("Toggle correction logging", nil, toggleBoundaryLog)
+    submenu:addOption("Succession totals", nil, successionReport)
+    submenu:addOption("Toggle succession timing", nil, toggleSuccessionTiming)
+    submenu:addOption("Time the hourly tick", nil, tickCost)
+    submenu:addOption("Arrival catch-up totals", nil, arrivalReport)
+    submenu:addOption("Recovery on this square", worldobjects, describeRecovery, square)
+    submenu:addOption("Mark this square cleared", worldobjects, clearSquare, square)
+    submenu:addOption("Force establishment here", worldobjects, forceEstablish, square)
+
+    local rungOption = submenu:addOption("Put a rung here", nil, nil)
+    local rungMenu = ISContextMenu:getNew(submenu)
+    submenu:addSubMenu(rungOption, rungMenu)
+    rungMenu:addOption("Grass", worldobjects, forceRung, square, "grass")
+    rungMenu:addOption("Groundcover and ferns", worldobjects, forceRung, square, "cover")
+    rungMenu:addOption("Bush", worldobjects, forceRung, square, "bush")
+    rungMenu:addOption("Nothing", worldobjects, forceRung, square, nil)
 
     local speciesOption = submenu:addOption("Plant a species here", nil, nil)
     local speciesMenu = ISContextMenu:getNew(submenu)

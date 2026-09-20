@@ -196,6 +196,18 @@ because on a fresh save there are none.
 
 Its own comment says so, and it is easy to misread as a general chunk-load event.
 
+What it is good for is the opposite job. `self.system:getObjectsInChunk(wx, wy)` returns
+exactly that system's own objects in the chunk being loaded, with no scan and no radius, so
+bringing already owned objects up to date on arrival is the one thing the hook answers
+directly. The same property that makes it useless for discovery makes it right for this.
+
+Two details for an override. The hook is invoked from java, by
+`zombie.globalObjects.SGlobalObjectSystem.chunkLoaded(int, int)` calling the lua method by
+name, so a derived method resolves normally and nothing has to be registered. And the base
+body ends with `finishedWithList`, which returns the ArrayList to a pool for reuse, so an
+override takes its own copy from `getObjectsInChunk` rather than holding the one the base
+method is about to recycle.
+
 ## No lua event sees a world object being placed by the engine
 
 `OnObjectAdded` is raised **only from lua**, in player-driven paths such as traps, rain
@@ -382,6 +394,22 @@ The relinquish is lazy. It happens on the first update where the displayed stage
 bloom actually changes; until then the stale data sits inert and `hasSpawned` keeps it from
 placing anything.
 
+## The rename releases grass and bushes too, not only trees
+
+`ErosionObj` is one class, and all four nature categories build their objects from it.
+`NatureTrees`, `NatureBush`, `NaturePlants` and `NatureGeneric` each construct `ErosionObj`
+instances in their own `init`, and the `name` field that `getObject` matches on lives on
+`ErosionObj` rather than on any category. `NatureBush` names its objects from `f_bushes_1_`
+sprites and `NatureGeneric` from `e_newgrass_1_`.
+
+So the relinquish above is an object mechanism, not a tree mechanism. Renaming a grass or
+bush object makes `getObject` return null on the next update and `clearCatModData` drops that
+square's category data exactly as it does for a tree.
+
+One difference matters. A tree is decided once, but `NatureGeneric` and `NatureBush` cycle
+their own objects on erosion's timer, so an understory square is contested until the rename
+lands rather than being a one shot to overwrite.
+
 ## `disableErosion` is a one way switch for the whole square
 
 `IsoGridSquare:disableErosion()` sets `ErosionData$Square.doNothing`, which `loadGridsquare`
@@ -417,9 +445,56 @@ Nothing promotes a square from one category to the next. Grass never becomes bus
 never becomes tree, and a square that loses its object keeps nothing in its place. Felling a
 tree is a permanent reduction in vegetation, and a cleared field stays cleared.
 
-`IsoChunk.CheckGrassRegrowth` is not a general counterexample. It only visits zones whose
-type is `GrassRegrowth` and paces itself with `SandboxOptions.animalGrassRegrowTime`, so it
-is the animal pasture mechanic rather than vegetation recovery.
+`IsoChunk.CheckGrassRegrowth` is not a general counterexample, but it is not only the animal
+pasture mechanic either. It visits zones of type `GrassRegrowth`, and
+`IsoGridSquare.removeGrass` registers one on any square it clears, so the player's own scythe
+creates them as well as animals grazing. What it restores is narrow: it walks the floor's
+attached anim sprites, finds the one named `blends_natural_01_87` that `removeGrass` put
+there, and removes it. That returns the ground to its grass appearance and nothing else. The
+`e_newgrass` tufts `removeGrass` deleted are not replaced, and no other vegetation is.
+
+`removeGrass` itself requires the floor to carry the `grassFloor` property, overlays
+`blends_natural_01_87` on it, and deletes every object flagged `canBeRemoved`. Pacing is
+`SandboxOptions.animalGrassRegrowTime`, in hours, which defaults to 48 and is the sandbox
+option named "Grass Regrowth time".
+
+The `animal` in that option's name is where it came from, not a condition on it.
+`IsoGridSquare.removeGrass` is the only thing in the game that creates a `GrassRegrowth` zone
+and `IsoChunk` is the only thing that reads one, so every caller gets the same treatment:
+`AnimalData` and `AnimalEventPacket` in java, and `ISScything`, `ISPlowAction` and
+`ISShovelAction` in lua. The method takes no arguments, so it cannot tell one caller from
+another even in principle.
+
+## How erosion eases vegetation into the world
+
+All four nature categories share one shape, and it is worth copying rather than inventing.
+
+Each stores three things per square in its `CategoryData`: `gameObj`, `spawnTime` and, except
+for `NaturePlants`, `maxStage`. So every layer has its own start date and its own ceiling per
+square, not a world-wide schedule.
+
+`validateSpawn` decides whether the square is claimed at all:
+
+| Category | Claim roll | `spawnTime` |
+|---|---|---|
+| `NatureGeneric`, grass | none, it takes every square offered | set without a roll |
+| `NaturePlants`, groundcover | `rand(x, y, 101)` against `spawnChance[noiseMainInt]` | `100 - eValue` |
+| `NatureBush` | the same roll | `100 - eValue` |
+| `NatureTrees` | the same roll | `130 - eValue` |
+
+Two consequences. Grass is not probabilistic: where grass owns the region entry for a square,
+it always appears, which is why a vanilla forest floor is continuous rather than speckled. And
+the layers are staggered by construction, since plants and bushes can begin at `eTicks` 0 on a
+high noise square while trees cannot start before 30.
+
+Each category builds its `spawnChance` table in `init` by interpolating with
+`ErosionCategory.clerp` over the noise index, from a different starting point per category, so
+density is a graded curve over one noise field rather than a flat share. One value per square
+therefore decides both how rich it is and how early it starts.
+
+Growth is in place. `ErosionCategory.updateObj` calls `ErosionObj.placeObject` only for the
+first appearance and `setStageObject` after that, so an object matures by having its sprite
+swapped rather than being removed and re-added.
 
 ## `placeObject` does not check whether the square is occupied
 
@@ -433,3 +508,21 @@ and that runs at claim time only.
 Anything placed there in the meantime does not stop erosion adding its own tree on top when
 the tick arrives. Lua cannot see the pending claim, since `ErosionCategory$Data` is not
 exposed.
+
+## Forage zones come only from the biome map
+
+`media/lua/server/metazones/metazoneHandler.lua`, `doMapZones`, reads each map's
+`objects.lua` and skips every object whose type is `Vegitation`, `DeepForest`, `Forest`,
+`TownZone`, `Farm`, `FarmLand` or `TrailerPark` before any of the registration branches are
+reached. Those authored rectangles never become zones.
+
+In Muldraugh that discards 1666 `Forest` rectangles covering 11255093 squares, along with all
+the authored `DeepForest`, `Vegitation`, `Farm`, `FarmLand`, `TownZone` and `TrailerPark`
+zones. Every forage zone `getZones` can return for those types comes from the per cell
+`maps/biomemap_*.png` through `BiomeMapConfig.lua` instead.
+
+Two consequences for anything keyed on zone type. `Vegitation` and `PHMixForest` are
+commented out of the biome map and skipped from `objects.lua`, so they exist by neither
+route. And plain `Forest` is only biome map pixels 59 and 79, `clay_shore` and `clay_lake`,
+which is 204315 squares of shoreline rather than the large authored forest the `objects.lua`
+rectangles suggest.

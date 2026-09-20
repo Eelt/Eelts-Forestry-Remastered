@@ -17,6 +17,12 @@ This is the behaviour the base game lacks: its growth is driven by a single worl
 counter, so two trees of the same species are always the same size. Under this capability,
 two trees adopted at different moments SHALL be able to differ in size.
 
+Elapsed time SHALL count whether or not the tree's area was loaded. A tree SHALL be brought up
+to date when its area loads, advancing every stage that has fallen due while it was away
+rather than one stage at a time after the player arrives. Any part of a stage not yet earned
+SHALL be carried forward, so that a tree repeatedly left and returned to ends up at the same
+size as one that was watched throughout.
+
 #### Scenario: A small tree left alone grows
 
 - **WHEN** an adopted tree below the ceiling is left for the time one stage takes
@@ -34,6 +40,19 @@ two trees adopted at different moments SHALL be able to differ in size.
 
 - **WHEN** an adopted tree reaches the ceiling in effect
 - **THEN** it stops advancing and stays at that stage indefinitely
+
+#### Scenario: Returning after a long absence
+
+- **WHEN** a player plants a tree, travels far enough for its area to unload, stays away long
+  enough for several stages to fall due, and returns
+- **THEN** the tree is already at the size that time earned it when the area comes into view
+- **AND** it does not visibly climb through the stages after the player arrives
+
+#### Scenario: Leaving and returning does not cost growth
+
+- **WHEN** one tree is watched continuously and another of the same species and pace is left
+  and returned to repeatedly over the same elapsed time
+- **THEN** both are at the same stage
 
 ### Requirement: Growing changes the tree's size, not its identity
 
@@ -68,6 +87,10 @@ a tree SHALL take roughly three in-game months to go from the smallest stage to 
 largest. Raising the value SHALL make growth take longer and lowering it SHALL make growth
 take less time, proportionally.
 
+A separate setting SHALL choose when a tree is brought up to date: when its area loads, which
+SHALL be the default, or only while the area is loaded, which is the older behaviour and
+SHALL advance a tree no more than one stage at a time. The pace setting SHALL apply to both.
+
 #### Scenario: Default pace
 
 - **WHEN** the pace setting is left at its default
@@ -78,6 +101,12 @@ take less time, proportionally.
 
 - **WHEN** the pace setting is set to twice its default
 - **THEN** each stage takes about twice as long as it would at the default
+
+#### Scenario: The older timing is chosen
+
+- **WHEN** the timing setting is set to the older behaviour and a player returns to a tree
+  that has been away long enough for several stages to fall due
+- **THEN** the tree advances one stage at a time while the player stays near it
 
 ### Requirement: Only undersized trees are taken over
 
@@ -140,9 +169,13 @@ Adoption at creation matters because the proximity scan only runs when the setti
 wild trees to be taken over. Without this, a planted tree would never be adopted under the
 setting that exists specifically to grow it.
 
+A tree created by vegetation succession SHALL likewise be adopted as it is created, for the
+same reason, and SHALL NOT be recorded as player-planted.
+
 A tree SHALL be recorded as player-planted only if the player planted it. A wild tree taken
 over by the proximity scan SHALL NOT become player-planted, however small it is or however
-long it has been growing.
+long it has been growing, and neither SHALL a tree that established naturally, whatever stood
+next to it when it did.
 
 #### Scenario: A tree is planted under the player-planted setting
 
@@ -166,6 +199,12 @@ long it has been growing.
   then changed to player-planted only
 - **THEN** that tree stops growing, because it was never planted by a player
 
+#### Scenario: An established tree is not player-planted
+
+- **WHEN** the setting is player-planted only and a tree establishes on cleared ground beside
+  a tree the player planted
+- **THEN** the established tree does not grow, because no player planted it
+
 ### Requirement: A setting controls which trees grow
 
 Growth SHALL be controlled by a setting offering at least three choices: the base game's
@@ -177,8 +216,10 @@ chooses which trees grow, not how large they may become, and there SHALL be no s
 control over the size a tree may reach.
 
 The setting governs growth alone. It SHALL NOT control whether wild species are corrected to
-suit their surroundings, and it SHALL NOT control whether the mod maintains a tree's seasonal
-appearance.
+suit their surroundings, it SHALL NOT control whether the mod maintains a tree's seasonal
+appearance, and it SHALL NOT control whether cleared ground recovers. Under the base game's
+growth choice a tree SHALL still establish on recovering ground, and SHALL then stay at the
+smallest size.
 
 A square the mod has corrected SHALL be owned by the mod outright. The base game's own growth
 of that tree SHALL end and SHALL NOT be emulated, because correction exists to replace that
@@ -189,7 +230,8 @@ not change size at all.
 
 #### Scenario: Set to the base game's behaviour
 
-- **WHEN** the setting is the base game's behaviour and composition correction is off
+- **WHEN** the setting is the base game's behaviour, composition correction is off and
+  succession is off
 - **THEN** no tree grows beyond what the base game does on its own
 
 #### Scenario: A corrected tree under the base game's behaviour
@@ -217,7 +259,14 @@ not change size at all.
 
 #### Scenario: An unmodded world needs both settings off
 
-- **WHEN** a player wants the world to behave as it would without the mod
+- **WHEN** a player wants wild trees to behave as they would without the mod
 - **THEN** the growth setting must be the base game's behaviour and composition correction
   must be turned off, because the growth setting alone no longer stops the mod changing
   anything
+
+#### Scenario: Cleared ground needs succession off as well
+
+- **WHEN** a player wants the whole world, and not only its standing trees, to behave as it
+  would without the mod
+- **THEN** succession must be turned off too, because neither of the other two settings stops
+  cleared ground recovering
