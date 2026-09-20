@@ -207,8 +207,8 @@ Three things work by construction and by single player testing.
   `Base.VHS_Home` on `OnFillContainer` at 1 in 260 across five room types and five container
   types, and stamps the guide onto it. The lookup half is proven, since the console has never
   printed its "could not find" warning, so the mod is holding a real `MediaData`. The insert
-  half has not been watched. With `RequireTreePlantingTape` on by default, this is the only
-  route to planting, so if it does not fire the feature is unreachable at default settings.
+  half has not been watched. With `RequireTreePlantingTape` on, this is the only route to
+  planting, so if it does not fire the feature is unreachable under that setting.
 - **The multiplayer unlock.** The tape grant runs server side and pushes the flag to the owning
   client through a server command. Confirmed in single player, where both halves run in one
   process. Never run against a dedicated server, so it is unknown whether the flag reaches the

@@ -31,7 +31,7 @@ option EeltsForestryRemastered.TreeGrowthTimeMultiplier
 option EeltsForestryRemastered.RequireTreePlantingTape
 {
     type = boolean,
-    default = true,
+    default = false,
     page = EeltsForestryRemastered,
     translation = EeltsForestryRemastered_RequireTreePlantingTape,
 }

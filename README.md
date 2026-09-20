@@ -28,7 +28,7 @@ vanilla entries are never modified in place.
   the forage zone you plant it in. Planting has to be learned from the base game's "Tree
   Planting Guide" home video, which the game defines but never spawns, so this mod puts
   copies of it back into the world. Controlled by the sandbox option "Require 'Tree
-  Planting Guide' for planting", on by default.
+  Planting Guide' VHS for planting", off by default.
 - **Canadian Hemlock drops pine cones.** The base game only gives cones to trees whose
   sprite name contains "pine", so Hemlock never drops any despite being a conifer. This mod
   gives it cones on the same terms as Virginia Pine, which means from the third growth stage

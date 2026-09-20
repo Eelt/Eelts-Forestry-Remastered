@@ -229,7 +229,7 @@ tape, specifically the line instructing the viewer to firm the soil around the b
 tree. Watching that line SHALL teach planting to that player permanently, and SHALL do so
 once rather than every time the line plays.
 
-This SHALL be controlled by a setting that is on by default. With the setting off, planting
+This SHALL be controlled by a setting that is off by default. With the setting off, planting
 SHALL be available from the start with no tape required.
 
 The requirement is per player rather than per world, so in multiplayer one player watching
