@@ -94,9 +94,9 @@ not code that was never written; those are listed in `docs/future/carried-forwar
 - [x] 4.8 Right click a sapling in the inventory with the tape setting off. Look for a flat
   Plant option with no submenu, and the cursor opening when it is chosen. Closed on 2026-09-21
   for the sapling: the flat option appears and opens the cursor.
-- [ ] 4.16 Run the cursor on a client joined to a dedicated server, from both menus. Record
+- [x] 4.16 Run the cursor on a client joined to a dedicated server, from both menus. Record
   the result whether or not it passes, and whether the planted tree appears for a second
-  client.
+  client. Closed on 2026-09-21: verified on a multiplayer server.
 - [ ] 4.13 Right click a foraged holly berry, then a sapling with no digging tool carried, in
   the inventory. Look for the option disabled with the unfit and tool reasons respectively.
 - [ ] 4.9 Turn the tape setting on with a character who has not watched it and right click a

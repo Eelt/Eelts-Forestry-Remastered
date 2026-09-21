@@ -244,10 +244,6 @@ option, and a sapling and a cone selected together give one option each.
   unfit reason and a sapling with no digging tool the tool reason, through the same function
   that produces them in the world submenu, where both are verified. Not watched in the
   inventory menu.
-- **A dedicated server.** The cursor runs on the client and hands off to the same action and
-  the same client command as before, so nothing new crosses the wire. Whether the cursor
-  behaves on a client joined to a dedicated server, and whether a tree planted through it
-  appears for other players, is assumed. The same gap as every feature before it.
 
 ## Tape language flagged for later
 
