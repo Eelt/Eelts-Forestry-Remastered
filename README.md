@@ -82,9 +82,13 @@ influence what seeds in near them.
 ### You can plant trees
 
 Dig a hole with a shovel, a trowel or a hand shovel, and put a sapling, a pine cone or a
-holly berry in it. You can plant anywhere the base game would let you plow a furrow, which
-means grass, forest floor and bare earth, but not sand, clay, gravel or anything you have
-built on. The tree starts at the smallest size and grows from there. A propagule that fell
+holly berry in it. Right click the ground and pick one under Plant Tree, or right click the
+propagule itself in your inventory. Either way you get a one square cursor, green where a tree
+can go and red where it cannot, and the click that follows is where the hole is dug. The
+cursor stays up until you run out of that propagule, right click or press Escape, so a stack
+of saplings goes in one click each. You can plant anywhere the base game would let you plow a
+furrow, which means grass, forest floor and bare earth, but not sand, clay, gravel or anything
+you have built on. The tree starts at the smallest size and grows from there. A propagule that fell
 from a tree you chopped down remembers which species that tree was and grows into the same
 one, so felling a Redmaple is how you get another Redmaple. A foraged one remembers nothing
 and grows whatever suits the forage zone you plant it in.

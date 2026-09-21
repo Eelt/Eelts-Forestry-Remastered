@@ -221,6 +221,34 @@ Loot distribution for VHS tapes is out of scope. The 1 in 260 rate was accepted 
 tuned, and no vanilla distribution table is touched: the mod adds an item on
 `OnFillContainer` and leaves `SuburbsDistributions` and `ProceduralDistributions` alone.
 
+### From `add-planting-cursor`
+
+The cursor itself is verified. It reads green on grass and red on road, tree, water and
+indoors, a click on red does nothing, a click on green walks the character over from either
+menu before the dig plays, three saplings go in in click order with the cursor closing on the
+third, right click and Escape both close it, Escape mid walk cancels the walk with it, a
+dropped shovel or a dropped sapling makes the click do nothing, a sapling in a crate gets no
+option, and a sapling and a cone selected together give one option each.
+
+- **The tape gate on the inventory option.** The inventory handler returns before building
+  anything when `knowsPlanting` is false, the same test the world menu makes. Read from the
+  code with the setting off; never watched with it on.
+- **A square blocked while walking.** The action's `isValid` re-runs `isPlantableSquare` on
+  arrival, so a large item dropped on the square during the walk should leave the sapling in
+  the inventory and plant nothing. The check that guards it predates this change; the walk
+  that gives it time to matter is new, and it has not been watched.
+- **The controller.** `DoTileBuildingJoyPad` drives a one square cursor from the character's
+  facing and the base class maps A to place and B to cancel. Nothing in the cursor is joypad
+  specific, and no controller has been plugged in.
+- **The two disabled reasons in the inventory menu.** A foraged holly berry should show the
+  unfit reason and a sapling with no digging tool the tool reason, through the same function
+  that produces them in the world submenu, where both are verified. Not watched in the
+  inventory menu.
+- **A dedicated server.** The cursor runs on the client and hands off to the same action and
+  the same client command as before, so nothing new crosses the wire. Whether the cursor
+  behaves on a client joined to a dedicated server, and whether a tree planted through it
+  appears for other players, is assumed. The same gap as every feature before it.
+
 ## Tape language flagged for later
 
 The tape is `RecMedia["db7deaf2-ddbe-42c8-8fd3-9725d8fdeff3"]`, category `Home-VHS`, item

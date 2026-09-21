@@ -526,3 +526,55 @@ commented out of the biome map and skipped from `objects.lua`, so they exist by 
 route. And plain `Forest` is only biome map pixels 59 and 79, `clay_shore` and `clay_lake`,
 which is 204315 squares of shoreline rather than the large authored forest the `objects.lua`
 rectangles suggest.
+
+## A ground cursor is a "drag", and its base `walkTo` clears the queue
+
+The green or red footprint the scythe, the shovel and the seed packet put under the mouse is
+what the engine calls a drag. `getCell():setDrag(cursor, playerNum)` installs one,
+`getDrag(playerNum)` reads it back and `setDrag(nil, playerNum)` removes it, calling the
+cursor's `deactivate` if it has one. On the lua side a cursor is any subclass of
+`ISBuildingObject` (`media/lua/server/BuildingObjects/ISBuildingObject.lua`); vanilla names
+them `IS<Thing>Cursor`, with `ISScytheGrassCursor` in `server/Animal/` and
+`ISFarmingCursorMouse` in `server/Farming/BuildingObjects/` the two closest to a one square
+action cursor.
+
+While a drag is installed, java calls the lua global `DoTileBuilding(cursor, isRender, x, y,
+z, square)` every frame. That tracks the hovered square, calls `cursor:isValid(square)`, calls
+`cursor:render(x, y, z, square)`, and on a release of the build button over a valid square
+calls `cursor:tryBuild`, which calls `cursor:walkTo(x, y, z)` and then `cursor:create(x, y, z,
+north, sprite)`. Setting `skipBuildAction = true` and `noNeedHammer = true` on the cursor
+skips the carpentry action and the hammer lookup. `dragNilAfterPlace = true` makes the cursor
+close after one placement; unset, it stays up.
+
+`ISBuildingObject:tryBuild` tests `ISBuildMenu.cheat or self:walkTo(x, y, z)`, and
+`ISBuildMenu.cheat` starts as `false or getDebug()`, so in debug mode no cursor walks through
+`walkTo` at all and `create` runs with the character wherever it stands. `walkTo` itself calls
+`luautils.walkAdj(playerObj, square)` without `keepActions`, which clears the timed action
+queue. A cursor that must always walk, and must not cancel a placement still in the queue,
+sets `skipWalk2 = true` and calls `luautils.walkAdj(playerObj, square, true)` inside `create`,
+which is what `ISShovelGroundCursor` does.
+
+Nothing has to close a drag on cancel. `ISWorldObjectContextMenu.createMenu` calls
+`setDrag(nil, player)` before it builds a world menu, `ISInventoryPane` does the same before
+an inventory menu, and `ISBuildingObject:onJoypadPressButton` clears it on the B button.
+
+The scythe draws its footprint with `renderIsoRect(x + 1, y + 1, z, radius, r, g, b, 0.5, 1)`
+in `getCore():getGoodHighlitedColor()` or `getBadHighlitedColor()`; the farming and shovel
+cursors draw a filled tile with `self:getFloorCursorSprite():RenderGhostTileColor(x, y, z, r,
+g, b, 0.8)`.
+
+The inventory context menu event is `OnFillInventoryObjectContextMenu(player, context,
+items)`, fired from `ISInventoryPaneContextMenu.createMenu`. `items` mixes bare items and
+stack tables; `ISInventoryPane.getActualItems(items)` flattens it, and
+`item:getContainer():isInCharacterInventory(playerObj)` tells whether the item is carried
+rather than in a container being looked into.
+
+## `ISBuildingObject` does not exist while `client/` lua parses
+
+Lua loads folder by folder, `shared`, then `client`, then `server`, vanilla's files before the
+mod's within each. `ISBuildingObject` is defined in `media/lua/server/BuildingObjects/`, so a
+mod cursor under `client/` that calls `ISBuildingObject:derive` at parse time fails with
+`attempted index: derive of non-table: null`, and `require "BuildingObjects/ISBuildingObject"`
+only logs a warning rather than pulling the file in early. A cursor belongs under `server/`,
+which is where vanilla keeps all of its own. The `client/` menu that opens it can still name
+the cursor global at option time, since everything has loaded by then.

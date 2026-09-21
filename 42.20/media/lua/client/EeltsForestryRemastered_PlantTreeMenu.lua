@@ -1,5 +1,4 @@
 require "EeltsForestryRemastered_Planting"
-require "TimedActions/EeltsForestryRemastered_PlantTreeAction"
 
 local function predicateDigPlow(item)
     return not item:isBroken() and item:hasTag(ItemTag.DIG_PLOW)
@@ -15,22 +14,31 @@ local function findSquare(worldobjects)
 end
 
 -- One entry per distinct propagule, so a stack of stamped saplings is not eleven menu lines
-local function gatherPropagules(inventory)
+local function gatherKinds(items)
     local propagules = EeltsForestryRemastered_Propagules
+    local planting = EeltsForestryRemastered_Planting
     local seen, kinds = {}, {}
-    local items = inventory:getItems()
-    for i = 0, items and items:size() - 1 or -1 do
-        local item = items:get(i)
+    for _, item in ipairs(items) do
         if propagules.isPlantable(item) then
-            local species = propagules.getSpecies(item)
-            local key = item:getFullType() .. "|" .. tostring(species)
-            if not seen[key] then
-                seen[key] = true
-                kinds[#kinds + 1] = { item = item, species = species }
+            local kind = Eelt_PlantTreeCursor.kindOf(item)
+            if not seen[kind.key] then
+                seen[kind.key] = kind
+                kind.item = item
+                kinds[#kinds + 1] = kind
+            elseif not planting.isPlantableItem(seen[kind.key].item) and planting.isPlantableItem(item) then
+                seen[kind.key].item = item -- a fit berry stands for the stack ahead of a poisoned one
             end
         end
     end
     return kinds
+end
+
+local function carriedItems(inventory)
+    local list, items = {}, inventory:getItems()
+    for i = 0, items and items:size() - 1 or -1 do
+        list[#list + 1] = items:get(i)
+    end
+    return list
 end
 
 local function labelFor(kind)
@@ -42,9 +50,9 @@ local function labelFor(kind)
         planting.speciesName(kind.species), kind.item:getDisplayName())
 end
 
-local function plant(worldobjects, playerObj, square, propagule, tool)
-    if not luautils.walkAdj(playerObj, square, true) then return end
-    ISTimedActionQueue.add(Eelt_PlantTreeAction:new(playerObj, square, propagule, tool))
+local function openCursor(_, playerObj, kind)
+    local cursor = Eelt_PlantTreeCursor:new(playerObj, kind)
+    getCell():setDrag(cursor, cursor.player)
 end
 
 local function disable(option, text)
@@ -52,6 +60,16 @@ local function disable(option, text)
     local tooltip = ISWorldObjectContextMenu.addToolTip()
     tooltip.description = text
     option.toolTip = tooltip
+end
+
+local function addKindOption(menu, playerObj, kind, tool)
+    local option = menu:addOption(labelFor(kind), nil, openCursor, playerObj, kind)
+    if not tool then
+        disable(option, getText("Tooltip_Eelt_PlantNeedsTool"))
+    elseif not EeltsForestryRemastered_Planting.isPlantableItem(kind.item) then
+        disable(option, getText("Tooltip_Eelt_PlantUnfit"))
+    end
+    return option
 end
 
 local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
@@ -65,7 +83,7 @@ local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
     if not planting.isPlantableSquare(square) then return end
 
     local inventory = playerObj:getInventory()
-    local kinds = gatherPropagules(inventory)
+    local kinds = gatherKinds(carriedItems(inventory))
     if #kinds == 0 then return end
 
     local tool = inventory:getFirstTagEvalRecurse(ItemTag.DIG_PLOW, predicateDigPlow)
@@ -80,11 +98,32 @@ local function onFillWorldObjectContextMenu(player, context, worldobjects, test)
     context:addSubMenu(parent, submenu)
 
     for _, kind in ipairs(kinds) do
-        local option = submenu:addOption(labelFor(kind), worldobjects, plant, playerObj, square, kind.item, tool)
-        if not planting.isPlantableItem(kind.item) then
-            disable(option, getText("Tooltip_Eelt_PlantUnfit"))
+        addKindOption(submenu, playerObj, kind, tool)
+    end
+end
+
+-- Only what the player carries; a sapling in a crate on the floor gets no option
+local function onFillInventoryObjectContextMenu(player, context, items)
+    local playerObj = getSpecificPlayer(player)
+    local planting = EeltsForestryRemastered_Planting
+    if not playerObj or not planting.knowsPlanting(playerObj) then return end
+
+    local carried = {}
+    for _, item in ipairs(ISInventoryPane.getActualItems(items)) do
+        local container = item:getContainer()
+        if container and container:isInCharacterInventory(playerObj) then
+            carried[#carried + 1] = item
         end
+    end
+
+    local kinds = gatherKinds(carried)
+    if #kinds == 0 then return end
+
+    local tool = playerObj:getInventory():getFirstTagEvalRecurse(ItemTag.DIG_PLOW, predicateDigPlow)
+    for _, kind in ipairs(kinds) do
+        addKindOption(context, playerObj, kind, tool)
     end
 end
 
 Events.OnFillWorldObjectContextMenu.Add(onFillWorldObjectContextMenu)
+Events.OnFillInventoryObjectContextMenu.Add(onFillInventoryObjectContextMenu)
