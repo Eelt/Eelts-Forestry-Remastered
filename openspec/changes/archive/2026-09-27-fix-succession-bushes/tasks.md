@@ -1,5 +1,8 @@
 # Tasks
 
+Every task below was implemented. An unchecked one in group 4 is a check that was never run,
+not code that was never written; those are listed in `docs/future/carried-forward.md`.
+
 ## 1. The bush palette and its looks
 
 - [x] 1.1 In `42.20/media/lua/shared/EeltsForestryRemastered_Understory.lua`, replace the sixteen

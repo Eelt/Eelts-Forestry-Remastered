@@ -245,6 +245,51 @@ option, and a sapling and a cone selected together give one option each.
   that produces them in the world submenu, where both are verified. Not watched in the
   inventory menu.
 
+### From `fix-succession-bushes`
+
+Removal is verified in a long running save: bushes grown back before the fix offer Remove Bush
+and can be removed, and with no cutting tool carried the option is absent. The console of that
+save reported all 16 bush entries resolved and 294 old bushes repaired and tracked, and two
+repaired bushes inspected straight after a later load carried exactly the summer overlay their
+date called for.
+
+- **Seasons through a year.** Foliage should go bare, spring, summer, autumn colour and bare
+  again, turning with a deciduous tree beside it, the autumn overlay arriving at first colour
+  with the stagger on and only in the first half of autumn with it off. Only late summer has
+  been seen, where the old and new looks are the same.
+- **Flowers and fruit on their dates.** Azalea flowers in April into early May, New Jersey tea
+  in June into mid July, blueberries mid June through July, St. John's wort July into mid
+  August, chokeberry berries mid September through December on bare and snowy branches, and
+  none outside those dates. With the stagger off, each should show inside the base game bush's
+  own early summer window. Checked by harness only.
+- **Snow on recovered bushes.** Should appear as on the base game's, since both share the base
+  sprite `ErosionIceQueen` swaps.
+- **A bush far from the player turning.** Should change across a season boundary while 40 or
+  more squares away in loaded ground, through the hourly refresh of the loaded bush table.
+- **Removal restarting recovery.** A bush or grass removed by hand should leave the square bare
+  for days and recover from grass upwards, with a fresh clearing time in the debug readout.
+- **One entry and the drops.** Exactly one Remove Bush entry on a recovered bush and on one
+  placed from the debug menu's Bush rung, and possible branches and twigs after removal.
+- **Repair with succession off.** An old save loaded with the setting off should still repair
+  its bushes and grow nothing.
+- **Shovel pickup of a grown bush.** A grown bush's base is a moveable hedge. Picking one up
+  does not mark the square cleared, so a bush may come straight back; not yet tried.
+- **Cost of the early exit check.** The discovery check on squares rejected before `inspect`
+  adds one `size()` call per square; not measured against a build without it.
+- **A dedicated server.** A second client should see a recovered bush's season change and its
+  removal.
+
+### From `fix-succession-first-load`
+
+Verified in single player with and without LetMeDrive, and on a new world: the first square
+read the save's real world day before the first succession report, which then counted no
+square too soon, and recovered bushes in the starting area wore the right look before any
+hourly refresh.
+
+- **A dedicated server.** The console should show "first square read the world at day" with
+  the save's real day before the first succession report. The server's order of loading and
+  `LoadGridsquare` has not been observed.
+
 ## Tape language flagged for later
 
 The tape is `RecMedia["db7deaf2-ddbe-42c8-8fd3-9725d8fdeff3"]`, category `Home-VHS`, item
