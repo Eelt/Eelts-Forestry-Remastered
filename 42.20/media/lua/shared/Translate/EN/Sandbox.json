@@ -1,47 +1,47 @@
 {
     "Sandbox_EeltsForestryRemastered": "Eelt's Forestry Remastered",
 
-    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops": "Canadian Hemlock cone drop fix",
-    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops_tooltip": "Makes Canadian Hemlock drop pine cones when chopped, on the same terms as Virginia Pine. The base game gives it none.",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops": "Hemlock drops pine cones",
+    "Sandbox_EeltsForestryRemastered_FixConiferConeDrops_tooltip": "Canadian Hemlock drops pine cones when chopped down, the same way Virginia Pine does. In the base game it never drops any.",
 
     "Sandbox_EeltsForestryRemastered_TreeGrowth": "Tree growth",
-    "Sandbox_EeltsForestryRemastered_TreeGrowth_tooltip": "Whether trees grow over time. The base game caps naturally spawned trees well below full size and drives their growth from a single world-wide counter, so forests never mature. Set this to the base game's behaviour to leave every tree alone.",
-    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option1": "Base game behaviour, nothing grows",
-    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option2": "Only trees you plant grow",
-    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option3": "All trees grow",
+    "Sandbox_EeltsForestryRemastered_TreeGrowth_tooltip": "Which trees grow over time. In the base game, wild trees stop growing well before full size. With \"All trees\", every tree keeps growing until it is full size. With \"Base game behaviour\", trees this mod has already taken over stay the size they are.",
+    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option1": "Base game behaviour",
+    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option2": "Only trees you plant",
+    "Sandbox_EeltsForestryRemastered_TreeGrowth_Values_option3": "All trees",
 
     "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier": "Tree growth time",
-    "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long a tree takes to grow, as a multiplier. At 1.0 a tree goes from a fresh sapling to the largest size in roughly three in-game months. Higher values take longer, lower values are faster.",
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTimeMultiplier_tooltip": "How long trees take to grow. At 1.0, a sapling reaches full size in about three in-game months. Higher is slower.",
 
     "Sandbox_EeltsForestryRemastered_TreeGrowthTiming": "Tree growth timing",
-    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_tooltip": "When a tree is brought up to date. Catching up on arrival means a tree you return to after a long absence is already the size that time earned it. Only while the area is loaded is the lighter choice for a low end PC.",
+    "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_tooltip": "With \"Catch up when you arrive\", trees keep growing while you are away, so an area you come back to has grown in the meantime. With \"Only while the area is loaded\", trees only grow while you are nearby. This is lighter on a low end PC.",
     "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_Values_option1": "Catch up when you arrive",
     "Sandbox_EeltsForestryRemastered_TreeGrowthTiming_Values_option2": "Only while the area is loaded",
 
-    "Sandbox_EeltsForestryRemastered_CorrectForestComposition": "Correct forest composition",
-    "Sandbox_EeltsForestryRemastered_CorrectForestComposition_tooltip": "Wild trees become species the surrounding area actually grows. The base game picks a species from soil noise and never looks at the biome, so a pine forest fills up with maples. Correcting a tree takes its square away from the base game for good: it will keep its new species, this mod maintains its seasons from then on, and under the base game tree growth setting it will no longer change size at all. Turning this off stops further correction and does not undo what is already corrected.",
+    "Sandbox_EeltsForestryRemastered_CorrectForestComposition": "Correct forest species",
+    "Sandbox_EeltsForestryRemastered_CorrectForestComposition_tooltip": "Changes wild trees to species that suit the area, so a pine forest is made of pines. The base game picks species without regard to the area, so pine forests fill up with maples. A corrected tree keeps its size and its spot, and this mod handles its seasons and growth from then on. Turning this off stops new corrections but does not undo old ones.",
 
-    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons": "Stagger autumn colour",
-    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons_tooltip": "Times foliage for Kentucky. Trees come into leaf in spring, stay green through summer and into September, take their first colour around the middle of September, are at their deepest through the second half of October, and are bare before winter, with each tree changing a little before or after its neighbours. Uncheck to show trees the way the base game does instead, which colours them from around the start of July and leaves them bare from the middle of autumn. Either way this mod drives the foliage of every tree it has taken over, because such a tree is off the base game's seasons permanently.",
+    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons": "Kentucky seasons",
+    "Sandbox_EeltsForestryRemastered_StaggerTreeSeasons_tooltip": "Trees this mod manages and bushes that grew back change on Kentucky's real timing. Leaves come out in late March, autumn colour starts in mid September, and trees are bare by early November, each one turning a little before or after its neighbours. Bushes also flower and fruit when their species does in Kentucky. Turn this off to use the base game's timing instead, which starts autumn colour in July.",
 
     "Sandbox_EeltsForestryRemastered_VegetationSuccession": "Vegetation grows back",
-    "Sandbox_EeltsForestryRemastered_VegetationSuccession_tooltip": "Cleared ground recovers over time: grass, then ferns and bushes, then trees. The base game puts nothing back. Only ground you cleared leaves old fields alone and is the lighter choice for a low end PC.",
-    "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option1": "Off, nothing grows back",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_tooltip": "Cleared ground slowly recovers: grass first, then tall grass and ferns, then bushes, and finally trees. In the base game, cleared ground stays bare forever. \"Only ground you cleared\" leaves fields that were already open when the world began alone, and is lighter on a low end PC.",
+    "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option1": "Off",
     "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option2": "Only ground you cleared",
     "Sandbox_EeltsForestryRemastered_VegetationSuccession_Values_option3": "All open ground",
 
     "Sandbox_EeltsForestryRemastered_RecoveryTimeMultiplier": "Regrowth time",
-    "Sandbox_EeltsForestryRemastered_RecoveryTimeMultiplier_tooltip": "How long regrowth takes. At 1.0 grass returns within days and the first saplings about a month after clearing. Higher is slower.",
+    "Sandbox_EeltsForestryRemastered_RecoveryTimeMultiplier_tooltip": "How fast cleared ground recovers. At 1.0, grass comes back within about a week and the first saplings appear after about a month. Higher is slower.",
 
     "Sandbox_EeltsForestryRemastered_RecoveryDensityMultiplier": "Regrowth density",
-    "Sandbox_EeltsForestryRemastered_RecoveryDensityMultiplier_tooltip": "How thickly trees grow back. At 1.0 an area reaches about the density its own biome carries. Set to 0 for grass and bushes but no trees. Never thins an existing wood.",
+    "Sandbox_EeltsForestryRemastered_RecoveryDensityMultiplier_tooltip": "How thickly trees grow back. At 1.0, an area fills back in to about as dense as that kind of forest normally is. At 0, only grass and bushes grow back, with no trees. Existing trees are never thinned out.",
 
-    "Sandbox_EeltsForestryRemastered_PlantedTreeParents": "Trees you planted as parents",
-    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_tooltip": "Whether trees you planted influence what grows back near them. Trees that seed themselves count as wild whatever this is set to.",
-    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option1": "No influence",
-    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option2": "Only where the species already grows",
-    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option3": "Any species, anywhere",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents": "Planted trees spread seed",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_tooltip": "Whether the trees you planted affect which species grow back near them. Trees that grew back on their own always count.",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option1": "No",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option2": "Only species native to the area",
+    "Sandbox_EeltsForestryRemastered_PlantedTreeParents_Values_option3": "Any species",
 
-    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape": "Require 'Tree Planting Guide' VHS for planting",
-    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape_tooltip": "If checked, you must watch the \"Home VHS: Tree Planting Guide\" tape before you can plant trees."
+    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape": "Planting needs the VHS tape",
+    "Sandbox_EeltsForestryRemastered_RequireTreePlantingTape_tooltip": "You have to watch the \"Home VHS: Tree Planting Guide\" tape before you can plant trees. The base game never spawns this tape, so this mod adds it as a rare find in houses, sheds, garages and storage units."
 }
