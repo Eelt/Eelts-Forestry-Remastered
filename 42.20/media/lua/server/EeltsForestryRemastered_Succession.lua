@@ -396,8 +396,18 @@ local function classify(square)
     evaluate(square, square:getX(), square:getY())
 end
 
+-- Squares arrive before OnGameStart, and the read at load time saw a world that was not there yet
+local ready = false
+
 local function onLoadGridsquare(square)
     if not square then return end
+
+    if not ready then
+        ready = true
+        refreshOptions()
+        understory.validateSprites()
+        print(string.format("%sfirst square read the world at day %.2f", PREFIX, worldDays))
+    end
 
     squares = squares + 1
     sinceReport = sinceReport + 1

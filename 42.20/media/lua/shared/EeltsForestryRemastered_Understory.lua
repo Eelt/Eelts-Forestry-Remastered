@@ -276,7 +276,13 @@ end
 
 -- The map still references vegetation_groundcover_01 tiles the game no longer loads, so a
 -- name being in the tile definitions is not proof it resolves
+local validated = false
+
+-- The succession pass asks on its first square and OnGameStart asks again, so it runs once
 function understory.validateSprites()
+    if validated then return end
+    validated = true
+
     local dropped = {}
     for rung, set in pairs(understory.sprites) do
         local keep = {}
