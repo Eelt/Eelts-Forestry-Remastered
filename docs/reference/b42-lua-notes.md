@@ -509,6 +509,103 @@ Anything placed there in the meantime does not stop erosion adding its own tree 
 the tick arrives. Lua cannot see the pending claim, since `ErosionCategory$Data` is not
 exposed.
 
+## How `NatureBush` builds a bush
+
+A base game bush is not one sprite. The erosion system's `NatureBush` category builds it as a
+bare base sprite with overlays in the object's `attachedAnimSprite`, and `NatureBush.init` lays
+the `f_bushes_1` sheet out by arithmetic. For each of its sixteen entries `i`, over eleven
+species, with `trunk = i % 8` and size 0 for young or 1 for grown:
+
+| Part | Index |
+|---|---|
+| base | `trunk + 8 * size` |
+| snow base | base plus 16 |
+| spring overlay | base plus 32 |
+| autumn overlay | base plus 48 |
+| summer overlay | `64 + i + 32 * size` |
+| `setFlower` layer | `80 + i + 32 * size` |
+
+Entries `i` and `i + 8` share a base and their spring and autumn overlays, and differ only in
+summer foliage and the `setFlower` layer. Every entry has overlays and every one but Spicebush
+has the extra layer, so none is evergreen.
+
+The `setFlower` layer is not always a flower. Viewed in `media/texturepacks/Tiles1x.pack`, it is
+dark blue berries for entry 3 (Blueberry) and small red berries for entries 8 and 9 (Red
+chokeberry), and blossom for Piedmont azalea (5, 6), New Jersey tea (11, 12) and Shrubby St.
+John's wort (15). It sits cleanly over the bare base, the snow base and every foliage overlay.
+
+Only indices 0 to 15 are bases, and only 0 to 31 carry `canBeCut` and `vegitation`. The summer
+overlays at 64 to 79 carry nothing but `MoveWithWind`, and 96 to 111 carry the moveable Hedge
+properties without `canBeCut`. The text export of `tiledefinitions_erosion.tiles` omits the rows
+with no properties, but the binary declares the sheet as 16 by 8 with 128 tiles and
+`IsoWorld.LoadTileDefinitions` registers a sprite for every one, so all of them resolve.
+
+The display follows `ErosionSeason`'s numbering (1 spring, 2 early summer, 3 late summer, 4
+autumn, 5 winter): bare in winter, spring overlay in spring, summer overlay in early summer,
+autumn overlay for the first half of autumn, then bare. `currentBloom` shows the extra layer
+only in early summer, between the entry's `bloomStart` and `bloomEnd` fractions of the season,
+for half that window offset by the square's `magicNum`. `ErosionObj.setStageObject` adds the
+foliage overlay first and the extra layer after it. Snow is `ErosionIceQueen` swapping the
+shared base sprite, so any object using a base gets it.
+
+## What drives a base game bush's seasons
+
+Nothing outside `zombie.erosion` sets bush overlays. `GameTime` calls
+`ErosionMain.EveryTenMinutes`, whose `mainTimer` advances a day counter whenever the date
+changes, whatever the erosion speed setting is, and `IsoChunk` calls
+`ErosionMain.LoadGridsquare` as each square loads. Both reach `ErosionWorld.update`, then
+`NatureBush.update`, which picks the display from `currentSeason` and `currentBloom` and applies
+it through `setStageObject`.
+
+In single player a square is refreshed only when its chunk loads. The walk over loaded cells in
+`mainTimer` runs only on a dedicated server, and `updateMapNow` is otherwise reached only from
+a debug call and from a client receiving new erosion state. So a base game bush beside a player
+who never leaves the area keeps its look until its chunk reloads.
+
+## Map and worldgen bushes start as summer overlays
+
+`IsoChunk` maps legacy bush tile ids and the `randBush` placeholder to a random
+`f_bushes_1_64` to `79`, and the worldgen `bush_*` features list summer overlays too. Neither
+is a real bush until `NatureBush.replaceExistingObject` turns the object into entry `id % 16` at
+the grown size. That runs only from `ErosionWorld.validateSpawn`, once per square and before the
+lua `LoadGridsquare` event, so an overlay sprite placed by lua after a square's first load is
+never rebuilt and stays a summer overlay pretending to be a bush.
+
+## Remove Bush and Remove Grass come from sprite flags
+
+The world right click menu is built in java. `ISWorldObjectContextMenuLogic.fetch` records a
+square as `canBeCut` when an object's sprite has `IsoFlagType.canBeCut` and the player carries an
+unbroken `CUT_PLANT` item, and as `canBeRemoved` when the sprite has `IsoFlagType.canBeRemoved`.
+`doGardeningSubmenu` then adds Remove Bush and Remove Grass under Gardening, calling
+`ISWorldObjectContextMenu.onRemovePlant` and `onRemoveGrass`. No lua adds either entry, and the
+object's name plays no part.
+
+Everything downstream keys on the same flags: `ISRemovePlantCursor:getRemovableObject`,
+`ISRemoveBush:getBushObject` and `complete`, the cutting tool path in `CFarming_Interact.lua`,
+and `ISRemoveGrass`. The flags live on the shared `IsoSprite`, so setting one on a vanilla sprite
+would change every object in the world that uses it.
+
+## Close sneak cover is a fixed sprite list
+
+`IsoZombie.closeSneakBonusCoeff` checks the own sprite of each object on a square, not its
+attached overlays, against a fixed table of sprites that give close sneak cover. From
+`f_bushes_1` it lists 96 to 111 and none of the bases, so a base game grown bush, which wears
+base 8 to 15, gives none.
+
+## Bush flowering and fruiting on Kentucky dates
+
+Recovered bushes show the `setFlower` layer at the time that species flowers or fruits in
+Kentucky, rather than inside `NatureBush`'s early summer fractions. The windows, and the year
+positions they map to through the season table above:
+
+| Species | Layer | Window | Year position | Source |
+|---|---|---|---|---|
+| Piedmont azalea | flowers | 1 Apr to 10 May | 0.785 to 1.176 | [Lady Bird Johnson Wildflower Center](https://www.wildflower.org/plants/result.php?id_plant=rhca7): March to May, usually before the leaves; native to Kentucky |
+| New Jersey tea | flowers | 1 Jun to 15 Jul | 1.331 to 1.641 | [Backyard Ecology](https://www.backyardecology.net/new-jersey-tea/): June to July in Kentucky, clusters last about a month |
+| Blueberry | berries | 10 Jun to 31 Jul | 1.394 to 1.754 | [University of Kentucky HO-60](https://publications.mgcafe.uky.edu/files/ho60.pdf): harvest from early June in the west and mid June in central and eastern Kentucky to early August |
+| Shrubby St. John's wort | flowers | 1 Jul to 15 Aug | 1.542 to 1.859 | [Backyard Ecology](https://www.backyardecology.net/shrubby-st-johns-wort/): primarily July in Kentucky, sometimes into August |
+| Red chokeberry | berries | 15 Sep to 31 Dec | 2.188 to 3.579 | [NC State Extension](https://plants.ces.ncsu.edu/plants/aronia-arbutifolia/): fruit matures September to November and may persist through winter |
+
 ## Forage zones come only from the biome map
 
 `media/lua/server/metazones/metazoneHandler.lua`, `doMapZones`, reads each map's

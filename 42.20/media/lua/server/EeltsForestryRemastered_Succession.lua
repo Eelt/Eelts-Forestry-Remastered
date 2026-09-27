@@ -4,7 +4,10 @@ require "EeltsForestryRemastered_Planting"
 require "EeltsForestryRemastered_Propagules"
 require "EeltsForestryRemastered_Understory"
 require "EeltsForestryRemastered_TreeGrowthSprites"
+require "EeltsForestryRemastered_TreeSeasons"
 require "TimedActions/ISScything"
+require "TimedActions/ISRemoveBush"
+require "TimedActions/ISRemoveGrass"
 require "Farming/TimedActions/ISShovelAction"
 
 -- Vanilla puts nothing back on a square that loses its vegetation, so recovery is entirely
@@ -19,6 +22,7 @@ local planting = EeltsForestryRemastered_Planting
 local propagules = EeltsForestryRemastered_Propagules
 local understory = EeltsForestryRemastered_Understory
 local sprites = EeltsForestryRemastered_TreeGrowthSprites
+local seasons = EeltsForestryRemastered_TreeSeasons
 
 -- A crowded square retries on every chunk load, and the neighbour scan is the one expensive
 -- thing here, so each square only gets a try on one day in five
@@ -38,6 +42,7 @@ local timerOverheadMs = 0
 
 -- Upvalues rather than fields, since these are touched on every square
 local squares, offLevel, treed, tooSoon, untouched, vegetated, unchanged, ineligible, placed, established = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+local repaired = 0
 local timedSquares, timedMs = 0, 0
 local REPORT_EVERY = 20000
 local sinceReport = 0
@@ -48,6 +53,7 @@ print(PREFIX .. "succession loaded")
 -- the settings on every bare square, so they are read on the ten minute tick instead
 local enabled, pace, recoverUntouched = true, 1.0, true
 local worldHours, worldDays, minDay = 0, 0, 3.0
+local seasonName, seasonProgress, staggerOn = nil, 1.0, true
 
 local function refreshOptions()
     local mode = understory.successionMode()
@@ -57,6 +63,7 @@ local function refreshOptions()
     worldHours = getGameTime():getWorldAgeHours()
     worldDays = worldHours / 24
     minDay = understory.bounds(pace)
+    seasonName, seasonProgress, staggerOn = seasons.current()
 end
 
 -- Placement and replacement
@@ -109,11 +116,108 @@ local function spriteNameOf(object)
     return sprite and sprite:getName() or nil
 end
 
--- The name is what takes the square off erosion, so it goes on at construction
+-- Bushes
+
+-- Every bush of ours in loaded ground, for the hourly refresh. Never saved; a reload refills it
+-- as each bush comes back through a chunk load
+local loadedBushes = {}
+
+local function bushKey(x, y)
+    return x * 100000 + y
+end
+
+local function parentName(instance)
+    local parent = instance and instance:getParentSprite()
+    return parent and parent:getName()
+end
+
+-- Compared by name first, so an unchanged bush costs a few lookups and sends nothing
+local function applyBushLook(object, entry, x, y)
+    local wanted = {}
+    for _, name in ipairs(understory.bushOverlays(entry, x, y, seasonName, seasonProgress, staggerOn)) do
+        if getSprite(name) then wanted[#wanted + 1] = name end
+    end
+
+    local attached = object:getAttachedAnimSprite()
+    local count = attached and attached:size() or 0
+    if count == #wanted then
+        local same = true
+        for i = 1, count do
+            if parentName(attached:get(i - 1)) ~= wanted[i] then
+                same = false
+                break
+            end
+        end
+        if same then return false end
+    end
+
+    if attached then
+        attached:clear()
+    else
+        object:setAttachedAnimSprite(ArrayList.new())
+        attached = object:getAttachedAnimSprite()
+    end
+    for _, name in ipairs(wanted) do
+        attached:add(getSprite(name):newInstance())
+    end
+    return true
+end
+
+-- The hash decides the entry, and a base that no longer agrees is left for evaluate to replace
+local function bushEntryOn(object, x, y)
+    local entry = understory.bushFor(x, y)
+    if entry and spriteNameOf(object) == understory.bushBase(entry) then return entry end
+    return nil
+end
+
+-- Repairs a bush the first build placed, brings its look up to date, and remembers it
+local function tend(square, object, x, y)
+    local name = spriteNameOf(object)
+    if not understory.isBushSprite(name) then return end
+
+    local entry = understory.oldBushEntry(name)
+    local rebuilt = entry ~= nil
+    if rebuilt then
+        object:setSprite(getSprite(understory.bushBase(entry)))
+        repaired = repaired + 1
+    else
+        entry = bushEntryOn(object, x, y)
+        if not entry then return end
+    end
+
+    local changed = applyBushLook(object, entry, x, y) or rebuilt
+    loadedBushes[bushKey(x, y)] = true
+    if changed and isServer() then object:transmitUpdatedSpriteToClients() end
+    if rebuilt then square:RecalcAllWithNeighbours(true) end
+end
+
+-- For the exits that never reach inspect. A bare square holds only its floor
+local function findOurs(square, x, y)
+    local objects = square:getObjects()
+    if objects:size() < 2 then return end
+    for i = 0, objects:size() - 1 do
+        local object = objects:get(i)
+        if object:getName() == understory.PLACED_NAME then
+            tend(square, object, x, y)
+            return
+        end
+    end
+end
+
+-- The name is what takes the square off erosion, so it goes on at construction. A bush gets its
+-- overlays before it is added, so the item sent to clients already carries them
 local function place(square, spriteName)
     if not getSprite(spriteName) then return false end
 
     local object = IsoObject.new(square, spriteName, understory.PLACED_NAME)
+    if understory.isBushSprite(spriteName) then
+        local x, y = square:getX(), square:getY()
+        local entry = understory.bushFor(x, y)
+        if entry then
+            applyBushLook(object, entry, x, y)
+            loadedBushes[bushKey(x, y)] = true
+        end
+    end
     square:AddTileObject(object)
     if isServer() then object:transmitCompleteItemToClients() end
     placed = placed + 1
@@ -216,6 +320,7 @@ local function evaluate(square, x, y)
         elapsed = worldDays - cleared / 24
     elseif not recoverUntouched then
         untouched = untouched + 1
+        findOurs(square, x, y)
         return
     else
         elapsed = worldDays
@@ -223,12 +328,14 @@ local function evaluate(square, x, y)
 
     if elapsed < minDay then
         tooSoon = tooSoon + 1
+        findOurs(square, x, y)
         return
     end
 
     local treeReady, rung = understory.state(x, y, elapsed, pace)
     local wanted = understory.spriteFor(rung, x, y)
     local ours, foreign = inspect(square)
+    if ours then tend(square, ours, x, y) end
     local trying = treeReady and mayTryToday(x, y)
 
     -- Anything already growing here stops the understory, since recovery may not stack a
@@ -284,7 +391,7 @@ local function classify(square)
         return
     end
 
-    if not enabled then return end
+    if not enabled then return findOurs(square, square:getX(), square:getY()) end
 
     evaluate(square, square:getX(), square:getY())
 end
@@ -312,8 +419,6 @@ end
 -- Chunk load catches a square arriving. A square a player is standing next to has already
 -- arrived, so the hourly tick walks those instead
 function succession.sweepNearPlayers()
-    if not enabled then return end
-
     local cell = getCell()
     if not cell then return end
 
@@ -328,12 +433,35 @@ function succession.sweepNearPlayers()
                 for x = px - SWEEP_RADIUS, px + SWEEP_RADIUS do
                     for y = py - SWEEP_RADIUS, py + SWEEP_RADIUS do
                         local square = cell:getGridSquare(x, y, 0)
-                        if square and not square:HasTree() then evaluate(square, x, y) end
+                        if square and not square:HasTree() then
+                            if enabled then evaluate(square, x, y) else findOurs(square, x, y) end
+                        end
                     end
                 end
             end
         end
     end
+end
+
+-- Seasons turn on loaded ground too, so every bush seen since it loaded is brought up to date
+function succession.refreshBushes()
+    local cell = getCell()
+    if not cell then return end
+    refreshOptions()
+
+    local gone = {}
+    for key in pairs(loadedBushes) do
+        local x, y = math.floor(key / 100000), key % 100000
+        local square = cell:getGridSquare(x, y, 0)
+        local ours = square and inspect(square)
+        local entry = ours and bushEntryOn(ours, x, y)
+        if entry then
+            if applyBushLook(ours, entry, x, y) and isServer() then ours:transmitUpdatedSpriteToClients() end
+        else
+            gone[#gone + 1] = key
+        end
+    end
+    for _, key in ipairs(gone) do loadedBushes[key] = nil end
 end
 
 -- Everything the debug menu needs to see about one square, in one line each
@@ -357,6 +485,27 @@ function succession.describe(square)
         PREFIX, tostring(spriteNameOf(ours) or "nothing of ours"), tostring(foreign)))
     print(string.format("%s  eagerness=%.3f pace=%.2f grass=%.1f cover=%.1f bush=%.1f tree=%.1f tryToday=%s",
         PREFIX, eager, pace, grass, cover, bush, tree, tostring(mayTryToday(x, y))))
+
+    local entry = understory.bushFor(x, y)
+    if ours and entry and understory.isBushSprite(spriteNameOf(ours)) then
+        local carries = {}
+        local attached = ours:getAttachedAnimSprite()
+        for i = 0, attached and attached:size() - 1 or -1 do
+            carries[#carries + 1] = tostring(parentName(attached:get(i)))
+        end
+        local wants = understory.bushOverlays(entry, x, y, seasonName, seasonProgress, staggerOn)
+        local shift = seasons.shiftFor(x, y)
+        print(string.format("%s  bush entry %d size %d look=%s staggered=%s carries=%s wants=%s",
+            PREFIX, entry.index, entry.size,
+            tostring(seasons.lookFor(x, y, seasonName, seasonProgress, staggerOn)), tostring(staggerOn),
+            #carries > 0 and table.concat(carries, "+") or "none",
+            #wants > 0 and table.concat(wants, "+") or "none"))
+        print(string.format("%s  window %.3f to %.3f, year position %s, inside=%s, tracked=%s",
+            PREFIX, entry.from + shift, entry.to + shift,
+            tostring(seasons.yearPosition(seasonName, seasonProgress)),
+            tostring(seasons.inWindow(x, y, entry.from, entry.to, seasonName, seasonProgress)),
+            tostring(loadedBushes[bushKey(x, y)] == true)))
+    end
 
     local crowd, near, _, unloaded = survey(square, x, y)
     local limit = propagules.crowdLimitAt(x, y)
@@ -411,6 +560,10 @@ end
 function succession.report()
     print(string.format("%ssuccession: %d squares, %d off ground level, %d already treed, %d too soon, %d untouched and left alone, %d already growing, %d unchanged, %d ineligible, %d planted, %d trees established",
         PREFIX, squares, offLevel, treed, tooSoon, untouched, vegetated, unchanged, ineligible, placed, established))
+    local tracked = 0
+    for _ in pairs(loadedBushes) do tracked = tracked + 1 end
+    print(string.format("%sbushes: %d repaired from the first build, %d tracked in loaded ground",
+        PREFIX, repaired, tracked))
     if timedSquares > 0 then
         local raw = timedMs * 1000.0 / timedSquares
         print(string.format("%ssuccession timing: %d squares sampled, %d ms, %.2f microseconds a square raw, %.2f net of the timer",
@@ -436,6 +589,26 @@ local ISShovelAction_complete = ISShovelAction.complete
 function ISShovelAction:complete()
     local square = self.plant and self.plant:getSquare()
     local done = ISShovelAction_complete(self)
+    if square and not isClient() then understory.markCleared(square) end
+    return done
+end
+
+-- Pulling a bush or grass by hand is a clearing too, or recovery would put it straight back.
+-- A wall vine is not ground vegetation
+local ISRemoveBush_complete = ISRemoveBush.complete
+
+function ISRemoveBush:complete()
+    local square = self.square
+    local done = ISRemoveBush_complete(self)
+    if square and not self.wallVine and not isClient() then understory.markCleared(square) end
+    return done
+end
+
+local ISRemoveGrass_complete = ISRemoveGrass.complete
+
+function ISRemoveGrass:complete()
+    local square = self.square
+    local done = ISRemoveGrass_complete(self)
     if square and not isClient() then understory.markCleared(square) end
     return done
 end

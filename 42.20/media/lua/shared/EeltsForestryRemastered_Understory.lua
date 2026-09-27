@@ -1,6 +1,9 @@
+require "EeltsForestryRemastered_TreeSeasons"
+
 EeltsForestryRemastered_Understory = {}
 
 local understory = EeltsForestryRemastered_Understory
+local seasons = EeltsForestryRemastered_TreeSeasons
 
 -- Renaming is what makes vanilla erosion relinquish a square, and ErosionObj carries the
 -- matched name for grass and bushes as much as for trees
@@ -17,7 +20,8 @@ understory.OFF, understory.CLEARED_ONLY, understory.ALL_GROUND = 1, 2, 3
 
 understory.rungs = { "grass", "cover", "bush" }
 
--- Vanilla's own worldgen feature sprites, so recovered ground matches the ground beside it
+-- Vanilla's own worldgen feature sprites, so recovered ground matches the ground beside it.
+-- Bushes are built separately below, since a bush is a base sprite with overlays on it
 understory.sprites = {
     grass = {
         "e_newgrass_1_16", "e_newgrass_1_17", "e_newgrass_1_18",
@@ -31,13 +35,96 @@ understory.sprites = {
         "d_generic_1_80", "d_generic_1_81", "d_generic_1_82", "d_generic_1_83",
         "d_generic_1_84", "d_generic_1_85", "d_generic_1_86", "d_generic_1_87",
     },
-    bush = {
-        "f_bushes_1_67", "f_bushes_1_69", "f_bushes_1_70", "f_bushes_1_72",
-        "f_bushes_1_73", "f_bushes_1_75", "f_bushes_1_76", "f_bushes_1_79",
-        "f_bushes_1_99", "f_bushes_1_101", "f_bushes_1_102", "f_bushes_1_104",
-        "f_bushes_1_105", "f_bushes_1_107", "f_bushes_1_108", "f_bushes_1_111",
-    },
 }
+
+-- Bushes
+
+local BUSH_SHEET = "f_bushes_1_"
+
+-- Per NatureBush index: the Kentucky window for whatever its flower layer draws, as year
+-- positions, then NatureBush's own bloom fractions for when the stagger setting is off
+local BUSH_WINDOWS = {
+    [3] = { 1.394, 1.754, 0.4, 0.5 },   -- Blueberry, ripe berries 10 Jun to 31 Jul
+    [5] = { 0.785, 1.176, 0.0, 0.15 },  -- Piedmont azalea, flowers 1 Apr to 10 May
+    [6] = { 0.785, 1.176, 0.0, 0.15 },
+    [8] = { 2.188, 3.579, 0.9, 1.0 },   -- Red chokeberry, berries 15 Sep to 31 Dec
+    [9] = { 2.188, 3.579, 0.9, 1.0 },
+    [11] = { 1.331, 1.641, 0.4, 0.8 },  -- New Jersey tea, flowers 1 Jun to 15 Jul
+    [12] = { 1.331, 1.641, 0.4, 0.8 },
+    [15] = { 1.542, 1.859, 0.35, 0.75 }, -- Shrubby St. John's wort, flowers 1 Jul to 15 Aug
+}
+
+-- The same order as the summer overlays the first build placed, so the hash still gives each
+-- square the bush it was given then
+local BUSH_ORDER = { 3, 5, 6, 8, 9, 11, 12, 15 }
+
+understory.bushes = {}
+for size = 0, 1 do
+    for _, index in ipairs(BUSH_ORDER) do
+        local window = BUSH_WINDOWS[index]
+        understory.bushes[#understory.bushes + 1] = {
+            index = index, size = size,
+            from = window[1], to = window[2], bloomStart = window[3], bloomEnd = window[4],
+        }
+    end
+end
+
+local function bushSprite(id)
+    return BUSH_SHEET .. id
+end
+
+-- NatureBush's layout: young and grown bases share a column, overlays sit in rows below them
+local function baseId(entry)
+    return entry.index % 8 + 8 * entry.size
+end
+
+function understory.bushBase(entry)
+    return bushSprite(baseId(entry))
+end
+
+-- Staggered, Late Summer starts at first colour; otherwise it is only the back half of summer
+local function foliageId(entry, look, staggered)
+    if look == "Spring" then return baseId(entry) + 32 end
+    if look == "Early Summer" or (look == "Late Summer" and not staggered) then
+        return 64 + entry.index + 32 * entry.size
+    end
+    if look == "Late Summer" or look == "Autumn" then return baseId(entry) + 48 end
+    return nil
+end
+
+local function showsLayer(entry, x, y, season, progress, staggered)
+    if staggered then return seasons.inWindow(x, y, entry.from, entry.to, season, progress) end
+    return seasons.vanillaBloom(x, y, entry.bloomStart, entry.bloomEnd, season, progress)
+end
+
+-- The overlays a bush should carry, foliage first and then the flower or fruit layer, the
+-- order NatureBush stacks them in
+function understory.bushOverlays(entry, x, y, season, progress, staggered)
+    local names = {}
+    local foliage = foliageId(entry, seasons.lookFor(x, y, season, progress, staggered), staggered)
+    if foliage then names[#names + 1] = bushSprite(foliage) end
+    if showsLayer(entry, x, y, season, progress, staggered) then
+        names[#names + 1] = bushSprite(80 + entry.index + 32 * entry.size)
+    end
+    return names
+end
+
+function understory.isBushSprite(name)
+    return name ~= nil and string.find(name, BUSH_SHEET, 1, true) == 1
+end
+
+-- The first build placed a summer overlay as the whole bush. Its index still says which
+-- NatureBush entry and size it was, the same way NatureBush reads a map placed one
+function understory.oldBushEntry(name)
+    if not understory.isBushSprite(name) then return nil end
+    local id = tonumber(string.sub(name, #BUSH_SHEET + 1))
+    if not id or id < 64 or (id > 79 and id < 96) or id > 111 then return nil end
+    local index, size = id % 16, id >= 96 and 1 or 0
+    for _, entry in ipairs(understory.bushes) do
+        if entry.index == index and entry.size == size then return entry end
+    end
+    return nil
+end
 
 -- Days after clearing at which the keenest square reaches each rung. The tree rung is set
 -- to vanilla's own earliest wild tree, which erosion places on day 30 of a default world
@@ -161,7 +248,18 @@ function understory.state(x, y, elapsedDays, pace)
     return adjusted >= TREE_DAY, carried
 end
 
+-- Salt 211 is the one the first build picked bush sprites with, so repaired bushes still match
+function understory.bushFor(x, y)
+    local set = understory.bushes
+    if #set == 0 then return nil end
+    return set[math.floor(hash(x, y, 211) * #set) + 1]
+end
+
 function understory.spriteFor(rung, x, y)
+    if rung == "bush" then
+        local entry = understory.bushFor(x, y)
+        return entry and understory.bushBase(entry)
+    end
     local set = rung and understory.sprites[rung]
     if not set or #set == 0 then return nil end
     return set[math.floor(hash(x, y, 211) * #set) + 1]
@@ -198,6 +296,26 @@ function understory.validateSprites()
     print("Eelt's Forestry Remastered: understory holds " .. kept .. " sprites"
         .. (#dropped > 0 and ", dropped " .. #dropped .. " the game does not have: "
             .. table.concat(dropped, ", ") or ""))
+
+    -- A missing base loses the bush; a missing overlay only loses that one look
+    local bushes, droppedBushes, missing = {}, {}, {}
+    for _, entry in ipairs(understory.bushes) do
+        local base = understory.bushBase(entry)
+        if getSprite(base) then
+            bushes[#bushes + 1] = entry
+            for _, id in ipairs({ baseId(entry) + 32, baseId(entry) + 48,
+                    64 + entry.index + 32 * entry.size, 80 + entry.index + 32 * entry.size }) do
+                if not getSprite(bushSprite(id)) then missing[#missing + 1] = bushSprite(id) end
+            end
+        else
+            droppedBushes[#droppedBushes + 1] = base
+        end
+    end
+    understory.bushes = bushes
+
+    print("Eelt's Forestry Remastered: understory holds " .. #bushes .. " bushes"
+        .. (#droppedBushes > 0 and ", dropped " .. table.concat(droppedBushes, ", ") or "")
+        .. (#missing > 0 and ", missing overlays " .. table.concat(missing, ", ") or ""))
 end
 
 Events.OnGameStart.Add(understory.validateSprites)

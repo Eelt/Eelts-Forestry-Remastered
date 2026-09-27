@@ -11,8 +11,12 @@ function seasons.staggerFor(x, y)
 end
 
 function seasons.progress()
+    -- Erosion does not exist yet while mod lua is loading
+    local main = ErosionMain.getInstance()
+    local erosion = main and main:getSeasons()
+    if not erosion then return 1.0 end
+
     local ok, progress = pcall(function()
-        local erosion = ErosionMain.getInstance():getSeasons()
         local days = erosion:getSeasonDays()
         if days <= 0 then return 1.0 end
         return erosion:getSeasonDay() / days
@@ -75,6 +79,32 @@ function seasons.staggered(season, progress, stagger)
     if position < DEEP_COLOUR + shift then return "Late Summer" end
     if position < LEAVES_DOWN + shift then return "Autumn" end
     return nil
+end
+
+function seasons.shiftFor(x, y)
+    return (seasons.staggerFor(x, y) - 0.5) * SPREAD
+end
+
+-- A dated window, moved by the same stagger that moves this square's foliage
+function seasons.inWindow(x, y, from, to, season, progress)
+    local position = seasons.yearPosition(season, progress)
+    if not position then return false end
+
+    local shift = seasons.shiftFor(x, y)
+    return position >= from + shift and position < to + shift
+end
+
+-- NatureBush's currentBloom in fractions of the season, with the stagger standing in for magicNum
+function seasons.vanillaBloom(x, y, bloomStart, bloomEnd, season, progress)
+    if season ~= "Early Summer" then return false end
+
+    local magic = seasons.staggerFor(x, y)
+    local total = 1 - magic / 2
+    local day = progress - magic / 2
+    local low, high = total * bloomStart, total * bloomEnd
+    local split = (high - low) / 2
+    low = low + split * magic
+    return day >= low and day <= low + split
 end
 
 -- Vanilla splits summer and autumn at their midpoints, staggered per square. That is what

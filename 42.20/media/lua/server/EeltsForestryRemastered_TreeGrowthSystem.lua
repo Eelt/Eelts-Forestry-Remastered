@@ -207,6 +207,9 @@ function Eelt_STreeGrowthSystem:refreshAllOverlays()
     for i = 1, self.system:getObjectCount() do
         self.system:getObjectByIndex(i - 1):getModData():refreshOverlay(season, progress, staggered)
     end
+
+    local succession = EeltsForestryRemastered_Succession
+    if succession then succession.refreshBushes() end
 end
 
 function Eelt_STreeGrowthSystem.everyHour()
@@ -217,7 +220,10 @@ function Eelt_STreeGrowthSystem.everyHour()
 
     -- Chunk load catches a square arriving; this catches one a player is already standing on
     local succession = EeltsForestryRemastered_Succession
-    if succession then succession.sweepNearPlayers() end
+    if succession then
+        succession.sweepNearPlayers()
+        succession.refreshBushes()
+    end
 end
 
 SGlobalObjectSystem.RegisterSystemClass(Eelt_STreeGrowthSystem)
