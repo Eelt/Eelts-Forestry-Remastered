@@ -290,6 +290,44 @@ hourly refresh.
   the save's real day before the first succession report. The server's order of loading and
   `LoadGridsquare` has not been observed.
 
+### From `lighten-hourly-tick`
+
+Verified on the long running save: the hourly tree update fell from 26.2 ms in one frame on 0.0.2
+to 0.7 ms, walking 166 loaded trees instead of 8405; the whole hour is spread over 21 to 36 frames
+with a worst frame of 3 ms, or 4 ms once, with and without LetMeDrive and after the orphan repair
+raised the loaded count to 3375. The coroutine and the cursor measured the same, and the cursor
+was kept. The seed phase runs once per session and covers the whole save.
+
+- **The hitch by feel.** The numbers say the frame the hour turns over is no longer a hitch, but
+  nobody has stood in a forest on a lower end setup and watched it.
+- **The older timing leaving unloaded trees alone.** Under "Only while the area is loaded" a tree
+  should be the size it was left at when its area loads again, drawn at that size, and grow one
+  stage at a time after. Follows from the loaded list; not watched.
+- **A dedicated server.** The job relies on `OnTick` firing on a server, which is taken from
+  LetMeDrive's source. A job report on a server spread over several ticks would confirm it, and
+  the finding belongs in the coroutine and global object notes of `docs/reference/b42-lua-notes.md`.
+- **The QA helper's readout.** `EeltsForestryRemastered_PlantingQA.lua`'s `ageTree` calls
+  `everyHour` and reads the stage straight after, which now reads the stage before the job runs.
+  Calling `runHourNow` instead fixes it; left for a change that owns that file.
+- **The succession sweep is now the largest part of the hour,** 31 to 35 ms over its 41 columns.
+  Spread over frames it no longer hitches, but it is the part to look at if the hour ever needs to
+  be cheaper still.
+
+### From `repair-orphaned-trees`
+
+Verified on the long running save: the first load took back 1474 renamed trees without a record in
+the starting area, 3852 over 100000 squares of travel and another 1489 with composition correction
+off, every one redrawn in the right season at once and following the seasons after. A relaunch
+took back none and the chunk check dropped no record, so records are not still being lost. The
+repair cost about 100 ms of LetMeDrive's drain, once.
+
+- **A dedicated server.** The repair counts should appear in the server console and a client
+  should see the corrected overlays. Repaired trees are sent through the same path as planted
+  ones, which is verified in multiplayer, but thousands at once on a first load are not.
+- **Renamed trees that are not one of the eleven species.** 32 turned up with correction off, left
+  alone because their sprite does not identify. Printing their sprite names would say whether they
+  are burnt trees, legacy map trees or another mod's, and whether anything should be done with them.
+
 ## Tape language flagged for later
 
 The tape is `RecMedia["db7deaf2-ddbe-42c8-8fd3-9725d8fdeff3"]`, category `Home-VHS`, item
