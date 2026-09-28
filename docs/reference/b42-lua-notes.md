@@ -208,6 +208,50 @@ body ends with `finishedWithList`, which returns the ArrayList to a pool for reu
 override takes its own copy from `getObjectsInChunk` rather than holding the one the base
 method is about to recycle.
 
+## The global object list keeps every object, loaded or not
+
+`zombie/globalObjects/GlobalObjectSystem` holds a system's objects in one `objects` list and
+takes one out only through `removeObject`. Nothing removes an object when its chunk unloads,
+so `getObjectCount` and `getObjectByIndex` walk every object the system has ever registered
+in the save, and a loop over them grows with the save's age, not with the loaded area.
+
+An object whose chunk is unloaded still has its lua record, and changing that record changes
+nothing on screen: `SGlobalObject:getIsoObject` finds no object, and since `OnChunkLoaded`
+only validates, nothing redraws it when the chunk comes back either. The mod keeps its own
+table of adopted trees in loaded ground for the hourly work for this reason.
+
+## The order a chunk loads in, and records that go missing
+
+`zombie/iso/IsoChunk.doLoadGridsquare` handles each square of a loading chunk in turn: it calls
+`ErosionMain.LoadGridsquare`, then `MapObjects.loadGridSquare`, then fires the lua
+`LoadGridsquare` event. Only when every square is done does it call `ErosionMain.ChunkLoaded` and
+then `SGlobalObjects.chunkLoaded`, which runs each system's `OnChunkLoaded`.
+
+The shipped `SGlobalObjectSystem:OnChunkLoaded` removes any record whose square holds no object the
+system accepts. It reports this only through the system's `noise`, which prints nothing unless the
+system is being debugged, so a record can disappear without a line in the console. A record made
+during `LoadGridsquare` is in place, next to its object, by the time that check runs.
+
+The base game's way back for an object that loads without a record is
+`SGlobalObjectSystem:loadIsoObject`, which vanilla systems reach through
+`MapObjects.OnLoadWithSprite`. The tree growth system never registered one, so for a long time a
+renamed tree that lost its record stayed without one, owned by nothing and frozen in whatever
+foliage it wore. The boundary pass now takes such a tree back as its square loads, and counts the
+records the chunk check removes, so a cause that is still losing them shows up in its report.
+
+## Coroutines are available to mod lua
+
+`zombie/Lua/LuaManager` builds its environment with `platform.newEnvironment()`, and
+`se/krka/kahlua/j2se/J2SEPlatform.newEnvironment` registers `CoroutineLib` alongside the base,
+string, math and table libraries, so `coroutine.create`, `coroutine.resume`, `coroutine.yield`
+and `coroutine.status` exist for mod lua. No shipped lua uses them. A coroutine runs on the
+same game thread as everything else; it only lets a loop stop and carry on in a later frame.
+
+They work in game. On 2026-09-27 the hourly job ran on a coroutine and on a plain cursor for
+five in-game hours each on the same save, and the two were indistinguishable: 46.8 ms against
+48.2 ms total over about 23 frames, with a worst frame of 3 ms for both. The mod uses the
+cursor, which does not depend on a library no shipped lua uses.
+
 ## No lua event sees a world object being placed by the engine
 
 `OnObjectAdded` is raised **only from lua**, in player-driven paths such as traps, rain

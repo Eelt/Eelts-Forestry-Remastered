@@ -20,6 +20,7 @@ boundary.verbose = false
 
 -- Upvalues rather than fields on the table, since these are touched on every square
 local squares, settled, corrected, unzoned = 0, 0, 0, 0
+local reclaimed, unrecognised = 0, 0
 local REPORT_EVERY = 20000
 local sinceReport = 0
 
@@ -61,6 +62,24 @@ local function correct(square, tree)
     end
 end
 
+-- The name takes a tree off erosion for good, so a renamed tree without a record is owned by nothing
+local function reclaim(square, tree)
+    local system = Eelt_STreeGrowthSystem and Eelt_STreeGrowthSystem.instance
+    if not system or system:getLuaObjectOnSquare(square) then return end
+
+    local luaObject = system:reclaimTree(square, tree)
+    if not luaObject then
+        unrecognised = unrecognised + 1
+        return
+    end
+
+    reclaimed = reclaimed + 1
+    if boundary.verbose or reclaimed == 1 then
+        print(string.format("%stook back %d,%d stage %s, a renamed tree with no record",
+            PREFIX, square:getX(), square:getY(), tostring(luaObject.stage)))
+    end
+end
+
 -- Ordered by how often each test fires and what it costs. The setting is read only on the
 -- rare path, since reading it per square would cost more than the tree test it would gate
 local function onLoadGridsquare(square)
@@ -78,6 +97,7 @@ local function onLoadGridsquare(square)
 
     if tree:getName() == sprites.ADOPTED_NAME then
         settled = settled + 1
+        reclaim(square, tree)
         return
     end
 
@@ -87,8 +107,9 @@ local function onLoadGridsquare(square)
 end
 
 function boundary.report()
-    print(string.format("%sboundary: %d squares, %d already settled, %d corrected, %d left alone for want of a local pool",
-        PREFIX, squares, settled, corrected, unzoned))
+    local dropped = Eelt_STreeGrowthSystem and Eelt_STreeGrowthSystem.droppedAtLoad and Eelt_STreeGrowthSystem.droppedAtLoad() or 0
+    print(string.format("%sboundary: %d squares, %d already settled, %d corrected, %d left alone for want of a local pool, %d taken back, %d not recognised, %d records dropped by the chunk check",
+        PREFIX, squares, settled, corrected, unzoned, reclaimed, unrecognised, dropped))
 end
 
 Events.LoadGridsquare.Add(onLoadGridsquare)

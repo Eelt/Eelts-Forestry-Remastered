@@ -428,50 +428,56 @@ end
 
 -- Chunk load catches a square arriving. A square a player is standing next to has already
 -- arrived, so the hourly tick walks those instead
+succession.SWEEP_RADIUS = SWEEP_RADIUS
+
+-- One square of the sweep; the hourly job calls this a column at a time
+function succession.sweepSquare(x, y)
+    local square = getCell():getGridSquare(x, y, 0)
+    if square and not square:HasTree() then
+        if enabled then evaluate(square, x, y) else findOurs(square, x, y) end
+    end
+end
+
 function succession.sweepNearPlayers()
-    local cell = getCell()
-    if not cell then return end
+    if not getCell() then return end
 
     local online = getOnlinePlayers()
     local lastPlayer = isServer() and online:size() - 1 or getNumActivePlayers() - 1
     for i = 0, lastPlayer do
         local player = isServer() and online:get(i) or getSpecificPlayer(i)
-        if player then
+        if player and math.floor(player:getZ()) == 0 then
             local px, py = math.floor(player:getX()), math.floor(player:getY())
-            local pz = math.floor(player:getZ())
-            if pz == 0 then
-                for x = px - SWEEP_RADIUS, px + SWEEP_RADIUS do
-                    for y = py - SWEEP_RADIUS, py + SWEEP_RADIUS do
-                        local square = cell:getGridSquare(x, y, 0)
-                        if square and not square:HasTree() then
-                            if enabled then evaluate(square, x, y) else findOurs(square, x, y) end
-                        end
-                    end
-                end
+            for x = px - SWEEP_RADIUS, px + SWEEP_RADIUS do
+                for y = py - SWEEP_RADIUS, py + SWEEP_RADIUS do succession.sweepSquare(x, y) end
             end
         end
     end
 end
 
+-- A copy, so a bush dropped by refreshBush never changes the table while it is being walked
+function succession.loadedBushKeys()
+    local keys = {}
+    for key in pairs(loadedBushes) do keys[#keys + 1] = key end
+    return keys
+end
+
+function succession.refreshBush(key)
+    local x, y = math.floor(key / 100000), key % 100000
+    local square = getCell():getGridSquare(x, y, 0)
+    local ours = square and inspect(square)
+    local entry = ours and bushEntryOn(ours, x, y)
+    if not entry then
+        loadedBushes[key] = nil
+        return
+    end
+    if applyBushLook(ours, entry, x, y) and isServer() then ours:transmitUpdatedSpriteToClients() end
+end
+
 -- Seasons turn on loaded ground too, so every bush seen since it loaded is brought up to date
 function succession.refreshBushes()
-    local cell = getCell()
-    if not cell then return end
+    if not getCell() then return end
     refreshOptions()
-
-    local gone = {}
-    for key in pairs(loadedBushes) do
-        local x, y = math.floor(key / 100000), key % 100000
-        local square = cell:getGridSquare(x, y, 0)
-        local ours = square and inspect(square)
-        local entry = ours and bushEntryOn(ours, x, y)
-        if entry then
-            if applyBushLook(ours, entry, x, y) and isServer() then ours:transmitUpdatedSpriteToClients() end
-        else
-            gone[#gone + 1] = key
-        end
-    end
-    for _, key in ipairs(gone) do loadedBushes[key] = nil end
+    for _, key in ipairs(succession.loadedBushKeys()) do succession.refreshBush(key) end
 end
 
 -- Everything the debug menu needs to see about one square, in one line each

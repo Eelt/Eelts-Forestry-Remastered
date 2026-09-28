@@ -108,7 +108,7 @@ local function forceTick(tree)
     end
 
     local before = system.system:getObjectCount()
-    Eelt_STreeGrowthSystem.everyHour()
+    Eelt_STreeGrowthSystem.runHourNow()
     print(string.format("%sforced tick, adopted %d -> %d", PREFIX,
         before, system.system:getObjectCount()))
     describe(tree)
@@ -389,13 +389,24 @@ local function tickCost()
         return
     end
 
-    local count = system.system:getObjectCount()
-    local started = getTimestampMs()
-    for _ = 1, 10 do system:updateAdoptedTrees() end
-    local elapsed = getTimestampMs() - started
+    local names, phaseMs, phaseItems, total, loaded = system:timeHourlyJob(10)
+    if not names then
+        print(PREFIX .. "no cell loaded to time the hourly job in")
+        return
+    end
 
-    print(string.format("%shourly tick over %d objects: %d ms for ten runs, %.2f ms a run",
-        PREFIX, count, elapsed, elapsed / 10.0))
+    local parts = {}
+    for _, name in ipairs(names) do
+        parts[#parts + 1] = string.format("%s %.1f ms a run over %d items", name, phaseMs[name] / 10.0, phaseItems[name])
+    end
+    print(string.format("%shourly job, ten runs at once, %d trees in the save and %d loaded: %s",
+        PREFIX, total, loaded, table.concat(parts, ", ")))
+end
+
+local function toggleJobReport()
+    if not Eelt_STreeGrowthSystem then return end
+    Eelt_STreeGrowthSystem.reportJobs = not Eelt_STreeGrowthSystem.reportJobs
+    print(PREFIX .. "hourly job report " .. (Eelt_STreeGrowthSystem.reportJobs and "on" or "off"))
 end
 
 -- ErosionMain only recomputes the season on its own timer, so every date jump nudges it
@@ -597,6 +608,7 @@ local function addPlantingOptions(context, worldobjects, playerObj, square)
     submenu:addOption("Succession totals", nil, successionReport)
     submenu:addOption("Toggle succession timing", nil, toggleSuccessionTiming)
     submenu:addOption("Time the hourly tick", nil, tickCost)
+    submenu:addOption("Toggle the hourly job report", nil, toggleJobReport)
     submenu:addOption("Arrival catch-up totals", nil, arrivalReport)
     submenu:addOption("Recovery on this square", worldobjects, describeRecovery, square)
     submenu:addOption("Mark this square cleared", worldobjects, clearSquare, square)
