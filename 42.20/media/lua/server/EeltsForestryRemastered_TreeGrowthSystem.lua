@@ -30,6 +30,13 @@ local function track(luaObject)
     if luaObject then loadedTrees[luaObject.x .. "," .. luaObject.y .. "," .. luaObject.z] = luaObject end
 end
 
+-- Removal wipes the record's table, so this has to run before it
+local function untrack(luaObject)
+    if not luaObject or not luaObject.x then return end
+    local key = luaObject.x .. "," .. luaObject.y .. "," .. luaObject.z
+    if loadedTrees[key] == luaObject then loadedTrees[key] = nil end
+end
+
 function Eelt_STreeGrowthSystem:new()
     return SGlobalObjectSystem.new(self, "Eelt_TreeGrowth")
 end
@@ -158,6 +165,7 @@ function Eelt_STreeGrowthSystem:removeLuaObject(luaObject)
                 tostring(luaObject.x), tostring(luaObject.y), tostring(luaObject.z)))
         end
     end
+    untrack(luaObject)
     return SGlobalObjectSystem.removeLuaObject(self, luaObject)
 end
 
@@ -243,7 +251,7 @@ end
 -- Nil when the tree has unloaded or is no longer this system's record, which also drops it
 local function loadedTree(system, key)
     local luaObject = loadedTrees[key]
-    if luaObject and getCell():getGridSquare(luaObject.x, luaObject.y, luaObject.z)
+    if luaObject and luaObject.x and getCell():getGridSquare(luaObject.x, luaObject.y, luaObject.z)
             and system:getLuaObjectAt(luaObject.x, luaObject.y, luaObject.z) == luaObject then
         return luaObject
     end
